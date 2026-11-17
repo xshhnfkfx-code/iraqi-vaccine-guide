@@ -1,33 +1,13 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState } from "react";
 import {
   Activity, AlertCircle, Baby, Bell, CheckCircle2, ChevronLeft,
   Cloud, CloudOff, Menu, ShieldCheck, Syringe, Users, X,
-  CalendarDays, Plus, Save, Search, ClipboardList, ArrowRight,
-  Pencil, Trash2
+  CalendarDays, RotateCcw
 } from "lucide-react";
 
 import { navigation } from "./data/navigation";
-import type { SectionId, LocalRecord } from "./types";
-import {
-  getAllLocalRecords,
-  saveLocalRecord,
-  deleteLocalRecord
-} from "./lib/db";
-import { getNextVaccineAppointment } from "./lib/vaccineCalculator";
-
-interface ChildData {
-  name: string;
-  birthDate: string;
-  gender: string;
-  guardian: string;
-  phone: string;
-  center: string;
-}
-
-interface ChildEntry {
-  recordId: string;
-  data: ChildData;
-}
+import type { SectionId } from "./types";
+import { getAllLocalRecords } from "./lib/db";
 
 const metrics = [
   { label: "اللقاحات في الدليل", value: "—", note: "جدول التلقيح الوطني", icon: Syringe },
@@ -41,7 +21,7 @@ const metrics = [
 const descriptions: Record<SectionId, string> = {
   dashboard: "نظرة عامة على مؤشرات برنامج التلقيح.",
   vaccines: "قاعدة معلومات اللقاحات المعتمدة.",
-  children: "حساب موعد الجرعة القادمة تلقائياً من تاريخ ميلاد الطفل.",
+  children: "احسب العمر بين تاريخين بسهولة.",
   administration: "دليل إرشادي لطرق إعطاء اللقاحات ومواضع الحقن.",
   "cold-chain": "إدارة الثلاجات وسجل درجات الحرارة.",
   vitamins: "معلومات فيتامين A وفيتامين K.",
@@ -62,32 +42,41 @@ function localToday(): string {
   return `${year}-${month}-${day}`;
 }
 
-function formatDate(value: string): string {
-  if (!value) return "—";
-  const [year, month, day] = value.split("-");
-  return `${day}/${month}/${year}`;
-}
+function calculateAgeBetween(
+  birthDate: string,
+  comparisonDate: string
+): string | null {
+  if (!birthDate || !comparisonDate) return null;
 
-function calculateAge(birthDate: string): string {
-  const birth = new Date(`${birthDate}T00:00:00`);
-  const today = new Date();
+  const [by, bm, bd] = birthDate.split("-").map(Number);
+  const [ey, em, ed] = comparisonDate.split("-").map(Number);
 
-  if (Number.isNaN(birth.getTime()) || birth > today) {
-    return "تاريخ ميلاد غير صحيح";
+  const birth = new Date(by, bm - 1, bd);
+  const end = new Date(ey, em - 1, ed);
+
+  if (
+    Number.isNaN(birth.getTime()) ||
+    Number.isNaN(end.getTime()) ||
+    birth.getFullYear() !== by ||
+    birth.getMonth() !== bm - 1 ||
+    birth.getDate() !== bd ||
+    end.getFullYear() !== ey ||
+    end.getMonth() !== em - 1 ||
+    end.getDate() !== ed
+  ) {
+    return null;
   }
 
-  let years = today.getFullYear() - birth.getFullYear();
-  let months = today.getMonth() - birth.getMonth();
-  let days = today.getDate() - birth.getDate();
+  if (end < birth) return "التاريخ الثاني يسبق تاريخ الميلاد";
+
+  let years = ey - by;
+  let months = em - bm;
+  let days = ed - bd;
 
   if (days < 0) {
     months--;
-    const previousMonth = new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      0
-    );
-    days += previousMonth.getDate();
+    const daysInPreviousMonth = new Date(ey, em - 1, 0).getDate();
+    days += daysInPreviousMonth;
   }
 
   if (months < 0) {
@@ -95,9 +84,13 @@ function calculateAge(birthDate: string): string {
     months += 12;
   }
 
-  if (years > 0) return `${years} سنة و${months} شهر`;
-  if (months > 0) return `${months} شهر و${days} يوم`;
-  return `${days} يوم`;
+  return `${years} سنة و ${months} شهر و ${days} يوم`;
+}
+
+function formatDate(value: string): string {
+  if (!value) return "—";
+  const [year, month, day] = value.split("-");
+  return `${day}/${month}/${year}`;
 }
 
 function App() {
@@ -105,22 +98,9 @@ function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [online, setOnline] = useState(navigator.onLine);
   const [recordCount, setRecordCount] = useState(0);
-  const [children, setChildren] = useState<ChildEntry[]>([]);
-  const [selectedChildId, setSelectedChildId] = useState("");
-  const [showChildForm, setShowChildForm] = useState(false);
-  const [editingChildId, setEditingChildId] = useState("");
-  const [search, setSearch] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
 
-  const [form, setForm] = useState<ChildData>({
-    name: "",
-    birthDate: "",
-    gender: "ذكر",
-    guardian: "",
-    phone: "",
-    center: ""
-  });
+  const [birthDate, setBirthDate] = useState("");
+  const [comparisonDate, setComparisonDate] = useState(localToday());
 
   useEffect(() => {
     const update = () => setOnline(navigator.onLine);
@@ -129,21 +109,8 @@ function App() {
     window.addEventListener("offline", update);
 
     getAllLocalRecords()
-      .then((records) => {
-        setRecordCount(records.length);
-
-        const savedChildren = records
-          .filter((record) => record.type === "child")
-          .map((record) => ({
-            recordId: record.id,
-            data: record.payload as ChildData
-          }));
-
-        setChildren(savedChildren);
-      })
-      .catch(() => {
-        setRecordCount(0);
-      });
+      .then((records) => setRecordCount(records.length))
+      .catch(() => setRecordCount(0));
 
     return () => {
       window.removeEventListener("online", update);
@@ -153,146 +120,17 @@ function App() {
 
   const current = navigation.find((item) => item.id === active) ?? navigation[0];
 
-  const selectedChild = children.find(
-    (child) => child.recordId === selectedChildId
-  );
-
-  const nextAppointment = selectedChild
-    ? getNextVaccineAppointment(selectedChild.data.birthDate)
-    : null;
+  const ageResult = calculateAgeBetween(birthDate, comparisonDate);
 
   function chooseSection(id: SectionId) {
     setActive(id);
     setMobileMenuOpen(false);
-    setMessage("");
   }
 
-  function resetChildForm() {
-    setForm({
-      name: "",
-      birthDate: "",
-      gender: "ذكر",
-      guardian: "",
-      phone: "",
-      center: ""
-    });
-    setEditingChildId("");
-    setShowChildForm(false);
+  function resetCalculator() {
+    setBirthDate("");
+    setComparisonDate(localToday());
   }
-
-  function startEditingChild(child: ChildEntry) {
-    setForm({ ...child.data });
-    setEditingChildId(child.recordId);
-    setSelectedChildId("");
-    setShowChildForm(true);
-    setMessage("يمكنك تعديل بيانات الطفل ثم الضغط على حفظ التعديلات.");
-  }
-
-  async function handleSaveChild(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setMessage("");
-
-    if (!form.name.trim() || !form.birthDate) {
-      setMessage("يرجى إدخال اسم الطفل وتاريخ الميلاد.");
-      return;
-    }
-
-    if (form.birthDate > localToday()) {
-      setMessage("تاريخ الميلاد لا يمكن أن يكون في المستقبل.");
-      return;
-    }
-
-    setSaving(true);
-
-    try {
-      const now = new Date().toISOString();
-      const id = editingChildId || crypto.randomUUID();
-
-      const record: LocalRecord = {
-        id,
-        type: "child",
-        payload: { ...form },
-        createdAt: now,
-        updatedAt: now,
-        syncStatus: "pending"
-      };
-
-      await saveLocalRecord(record);
-
-      if (editingChildId) {
-        setChildren((previous) =>
-          previous.map((child) =>
-            child.recordId === editingChildId
-              ? { recordId: id, data: { ...form } }
-              : child
-          )
-        );
-
-        setMessage("تم تعديل بيانات الطفل بنجاح، وتم تحديث موعد اللقاح حسب تاريخ الميلاد الجديد.");
-        setSelectedChildId(id);
-      } else {
-        setChildren((previous) => [
-          { recordId: id, data: { ...form } },
-          ...previous
-        ]);
-
-        setRecordCount((count) => count + 1);
-        setMessage("تم حفظ بيانات الطفل بنجاح.");
-      }
-
-      setForm({
-        name: "",
-        birthDate: "",
-        gender: "ذكر",
-        guardian: "",
-        phone: "",
-        center: ""
-      });
-
-      setEditingChildId("");
-      setShowChildForm(false);
-    } catch {
-      setMessage("تعذر حفظ البيانات. حاول مرة أخرى.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleDeleteChild(child: ChildEntry) {
-    const confirmed = window.confirm(
-      `هل أنت متأكد من حذف بيانات الطفل "${child.data.name}"؟ لا يمكن التراجع عن هذا الحذف.`
-    );
-
-    if (!confirmed) return;
-
-    setMessage("");
-
-    try {
-      await deleteLocalRecord(child.recordId);
-
-      setChildren((previous) =>
-        previous.filter((item) => item.recordId !== child.recordId)
-      );
-
-      setRecordCount((count) => Math.max(0, count - 1));
-
-      if (selectedChildId === child.recordId) {
-        setSelectedChildId("");
-      }
-
-      if (editingChildId === child.recordId) {
-        resetChildForm();
-      }
-
-      setMessage("تم حذف بيانات الطفل بنجاح.");
-    } catch {
-      setMessage("تعذر حذف بيانات الطفل. حاول مرة أخرى.");
-    }
-  }
-
-  const filteredChildren = children.filter((child) =>
-    child.data.name.toLowerCase().includes(search.toLowerCase())
-  );
 
   return (
     <div className="app-shell">
@@ -404,338 +242,61 @@ function App() {
             <section className="children-module">
               <div className="children-toolbar">
                 <div>
-                  <h2>حاسبة مواعيد اللقاحات</h2>
-                  <p>عدد الأطفال المسجلين: {children.length}</p>
+                  <h2>حاسبة العمر</h2>
+                  <p>احسب العمر بين تاريخين بالسنوات والأشهر والأيام</p>
                 </div>
-
-                <button
-                  className="primary-button"
-                  onClick={() => {
-                    resetChildForm();
-                    setSelectedChildId("");
-                    setMessage("");
-                    setShowChildForm(true);
-                  }}
-                >
-                  <Plus size={17} />
-                  إضافة طفل
-                </button>
               </div>
 
-              {message && (
-                <div className="children-message">{message}</div>
-              )}
+              <div className="panel child-form">
+                <h3>أدخل التاريخين</h3>
 
-              {showChildForm && (
-                <form
-                  className="child-form panel"
-                  onSubmit={handleSaveChild}
-                >
-                  <h3>
-                    {editingChildId ? "تعديل بيانات الطفل" : "بيانات الطفل"}
-                  </h3>
+                <div className="child-fields">
+                  <label>
+                    تاريخ الميلاد الأول
+                    <input
+                      type="date"
+                      value={birthDate}
+                      max={localToday()}
+                      onChange={(e) => setBirthDate(e.target.value)}
+                    />
+                  </label>
 
-                  <div className="child-fields">
-                    <label>
-                      اسم الطفل *
-                      <input
-                        value={form.name}
-                        onChange={(e) =>
-                          setForm({ ...form, name: e.target.value })
-                        }
-                        placeholder="أدخل اسم الطفل"
-                        required
-                      />
-                    </label>
+                  <label>
+                    التاريخ الثاني
+                    <input
+                      type="date"
+                      value={comparisonDate}
+                      onChange={(e) => setComparisonDate(e.target.value)}
+                    />
+                  </label>
+                </div>
 
-                    <label>
-                      تاريخ الميلاد *
-                      <input
-                        type="date"
-                        value={form.birthDate}
-                        max={localToday()}
-                        onChange={(e) =>
-                          setForm({ ...form, birthDate: e.target.value })
-                        }
-                        required
-                      />
-                    </label>
-
-                    <label>
-                      الجنس
-                      <select
-                        value={form.gender}
-                        onChange={(e) =>
-                          setForm({ ...form, gender: e.target.value })
-                        }
-                      >
-                        <option value="ذكر">ذكر</option>
-                        <option value="أنثى">أنثى</option>
-                      </select>
-                    </label>
-
-                    <label>
-                      اسم ولي الأمر
-                      <input
-                        value={form.guardian}
-                        onChange={(e) =>
-                          setForm({ ...form, guardian: e.target.value })
-                        }
-                        placeholder="اسم الأب أو الأم"
-                      />
-                    </label>
-
-                    <label>
-                      رقم الهاتف
-                      <input
-                        type="tel"
-                        value={form.phone}
-                        onChange={(e) =>
-                          setForm({ ...form, phone: e.target.value })
-                        }
-                        placeholder="رقم الهاتف"
-                      />
-                    </label>
-
-                    <label>
-                      المركز الصحي
-                      <input
-                        value={form.center}
-                        onChange={(e) =>
-                          setForm({ ...form, center: e.target.value })
-                        }
-                        placeholder="اسم المركز الصحي"
-                      />
-                    </label>
+                {birthDate && comparisonDate && (
+                  <div className="age-preview">
+                    <CalendarDays size={21} />
+                    <span>العمر بين التاريخين:</span>
+                    <strong>{ageResult}</strong>
                   </div>
+                )}
 
-                  {form.birthDate && (
-                    <div className="age-preview">
-                      <CalendarDays size={19} />
-                      <span>عمر الطفل حالياً:</span>
-                      <strong>{calculateAge(form.birthDate)}</strong>
-                    </div>
-                  )}
-
-                  <div className="form-actions">
-                    <button
-                      className="primary-button"
-                      type="submit"
-                      disabled={saving}
-                    >
-                      <Save size={16} />
-                      {saving
-                        ? "جارٍ الحفظ..."
-                        : editingChildId
-                          ? "حفظ التعديلات"
-                          : "حفظ بيانات الطفل"}
-                    </button>
-
-                    <button
-                      className="secondary-button"
-                      type="button"
-                      onClick={() => {
-                        resetChildForm();
-                        setMessage("");
-                      }}
-                    >
-                      إلغاء
-                    </button>
-                  </div>
-                </form>
-              )}
-
-              {selectedChild && (
-                <section className="panel child-schedule-panel">
-                  <div className="schedule-heading">
-                    <button
-                      className="secondary-button"
-                      onClick={() => {
-                        setSelectedChildId("");
-                        setMessage("");
-                      }}
-                    >
-                      <ArrowRight size={15} />
-                      العودة إلى قائمة الأطفال
-                    </button>
-
-                    <div>
-                      <h2>موعد اللقاح القادم</h2>
-                      <p>
-                        {selectedChild.data.name} ·{" "}
-                        {calculateAge(selectedChild.data.birthDate)}
-                      </p>
-                    </div>
-                  </div>
-
-                  {nextAppointment ? (
-                    <>
-                      <div className="next-appointment-card">
-                        <div className="next-appointment-icon">
-                          <CalendarDays size={27} />
-                        </div>
-
-                        <div className="next-appointment-info">
-                          <span>موعد المرحلة القادمة حسب العمر</span>
-                          <strong>{nextAppointment.ageLabel}</strong>
-
-                          {nextAppointment.isWindow ? (
-                            <p>
-                              الفترة من {formatDate(nextAppointment.date)}
-                              {" "}إلى {formatDate(nextAppointment.endDate)}
-                            </p>
-                          ) : (
-                            <p>
-                              التاريخ المتوقع: {formatDate(nextAppointment.date)}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="next-vaccines-heading">
-                        <h3>اللقاحات المقررة في هذه المرحلة</h3>
-                        <span>{nextAppointment.vaccines.length} لقاح</span>
-                      </div>
-
-                      <div className="vaccine-dose-list">
-                        {nextAppointment.vaccines.map((vaccine) => (
-                          <article
-                            className="vaccine-dose-card"
-                            key={vaccine.id}
-                          >
-                            <div className="vaccine-dose-main">
-                              <div className="vaccine-dose-icon">
-                                <Syringe size={20} />
-                              </div>
-
-                              <div className="vaccine-dose-info">
-                                <strong>{vaccine.name}</strong>
-                                <span>الجرعة: {vaccine.dose}</span>
-                                <small>
-                                  العمر المحدد: {nextAppointment.ageLabel}
-                                </small>
-                              </div>
-                            </div>
-
-                            <div className="dose-status dose-upcoming">
-                              الموعد القادم
-                            </div>
-                          </article>
-                        ))}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="panel children-empty">
-                      <CheckCircle2 size={36} />
-                      <strong>لا توجد مواعيد أخرى في الجدول المعروض</strong>
-                      <span>
-                        لا توجد مرحلة عمرية قادمة مدرجة لهذا الطفل في الجدول الحالي.
-                      </span>
-                    </div>
-                  )}
-
-                  <div className="children-note">
-                    <AlertCircle size={17} />
-                    <span>
-                      الحساب يعتمد على تاريخ الميلاد والجدول الوطني المدخل في التطبيق.
-                      تاريخ الميلاد وحده لا يوضح ما إذا كان الطفل قد أخذ جرعات سابقة،
-                      لذلك يجب مراجعة البطاقة التلقيحية قبل اتخاذ قرار بشأن الجرعات.
-                    </span>
-                  </div>
-                </section>
-              )}
-
-              <div className="children-search">
-                <Search size={18} />
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="ابحث عن طفل بالاسم..."
-                />
+                <div className="form-actions">
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    onClick={resetCalculator}
+                  >
+                    <RotateCcw size={16} />
+                    مسح وإعادة ضبط
+                  </button>
+                </div>
               </div>
-
-              {filteredChildren.length === 0 ? (
-                <div className="panel children-empty">
-                  <Baby size={36} />
-                  <strong>
-                    {children.length === 0
-                      ? "لا يوجد أطفال مسجلون حالياً"
-                      : "لا توجد نتائج مطابقة"}
-                  </strong>
-                  <span>
-                    يمكنك إضافة طفل جديد من زر إضافة طفل.
-                  </span>
-                </div>
-              ) : (
-                <div className="children-list">
-                  {filteredChildren.map((child) => (
-                    <article
-                      className="panel child-card"
-                      key={child.recordId}
-                    >
-                      <div className="child-card-icon">
-                        <Baby size={23} />
-                      </div>
-
-                      <div className="child-card-info">
-                        <strong>{child.data.name}</strong>
-                        <span>
-                          {child.data.gender} ·{" "}
-                          {calculateAge(child.data.birthDate)}
-                        </span>
-                        <small>
-                          تاريخ الميلاد: {formatDate(child.data.birthDate)}
-                        </small>
-
-                        {child.data.guardian && (
-                          <small>ولي الأمر: {child.data.guardian}</small>
-                        )}
-
-                        {child.data.center && (
-                          <small>المركز الصحي: {child.data.center}</small>
-                        )}
-                      </div>
-
-                      <div className="child-card-actions">
-                        <button
-                          className="child-schedule-button"
-                          onClick={() => {
-                            setSelectedChildId(child.recordId);
-                            setMessage("");
-                          }}
-                        >
-                          <ClipboardList size={16} />
-                          حساب الموعد القادم
-                        </button>
-
-                        <button
-                          className="secondary-button"
-                          type="button"
-                          onClick={() => startEditingChild(child)}
-                        >
-                          <Pencil size={16} />
-                          تعديل
-                        </button>
-
-                        <button
-                          className="secondary-button"
-                          type="button"
-                          onClick={() => handleDeleteChild(child)}
-                        >
-                          <Trash2 size={16} />
-                          حذف
-                        </button>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              )}
 
               <div className="children-note">
                 <AlertCircle size={17} />
                 <span>
-                  يتم حفظ بيانات الأطفال على هذا الجهاز فقط حالياً.
-                  لا توجد مزامنة مع خادم مركزي.
+                  يبدأ التاريخ الثاني بتاريخ اليوم تلقائياً، ويمكنك تغييره
+                  إلى أي تاريخ آخر. تتحدث نتيجة العمر تلقائياً عند تعديل
+                  أي من التاريخين.
                 </span>
               </div>
             </section>
@@ -756,7 +317,7 @@ function App() {
 
                       <strong className="metric-value">
                         {metric.label === "الأطفال المسجلون"
-                          ? children.length
+                          ? "—"
                           : metric.value}
                       </strong>
 
@@ -918,3 +479,4 @@ function App() {
 }
 
 export default App;
+
