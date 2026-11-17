@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import {
   Activity, AlertCircle, Baby, Bell, CheckCircle2, ChevronLeft,
   Cloud, CloudOff, Menu, ShieldCheck, Syringe, Users, X,
-  CalendarDays, RotateCcw
+  CalendarDays, RotateCcw, Info
 } from "lucide-react";
 
 import { navigation } from "./data/navigation";
@@ -122,6 +122,8 @@ function App() {
   const [birthDate, setBirthDate] = useState("");
   const [comparisonDate, setComparisonDate] = useState(formatDate(localToday()));
 
+  const [selectedVaccineId, setSelectedVaccineId] = useState<string | null>(null);
+
   useEffect(() => {
     const update = () => setOnline(navigator.onLine);
 
@@ -149,9 +151,14 @@ function App() {
     items: vaccineSchedule.filter((item) => item.ageLabel === ageLabel)
   }));
 
+  const selectedVaccine = vaccineSchedule.find(
+    (item) => item.id === selectedVaccineId
+  );
+
   function chooseSection(id: SectionId) {
     setActive(id);
     setMobileMenuOpen(false);
+    setSelectedVaccineId(null);
   }
 
   function resetCalculator() {
@@ -270,7 +277,7 @@ function App() {
               <div className="panel-heading vaccine-heading">
                 <div>
                   <h2>جدول اللقاحات الوطني</h2>
-                  <p>الجرعات مرتبة حسب العمر المحدد في الدليل</p>
+                  <p>اضغط على عرض التفاصيل لمعرفة معلومات كل جرعة</p>
                 </div>
                 <span className="muted-tag">{vaccineSchedule.length} جرعة / بند</span>
               </div>
@@ -294,12 +301,74 @@ function App() {
                           <strong>{item.name}</strong>
                           <span>الجرعة: {item.dose}</span>
                           {item.notes && <small>{item.notes}</small>}
+
+                          <button
+                            type="button"
+                            className="secondary-button"
+                            onClick={() => setSelectedVaccineId(item.id)}
+                          >
+                            <Info size={16} />
+                            عرض التفاصيل
+                          </button>
                         </div>
                       </article>
                     ))}
                   </div>
                 </section>
               ))}
+
+              {selectedVaccine && (
+                <section className="panel vaccine-detail-panel">
+                  <div className="panel-heading">
+                    <div>
+                      <h2>تفاصيل الجرعة</h2>
+                      <p>المعلومات المسجلة في جدول اللقاحات</p>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="icon-button"
+                      aria-label="إغلاق التفاصيل"
+                      onClick={() => setSelectedVaccineId(null)}
+                    >
+                      <X size={19} />
+                    </button>
+                  </div>
+
+                  <div className="vaccine-detail-content">
+                    <div className="vaccine-detail-icon">
+                      <Syringe size={25} />
+                    </div>
+
+                    <h3>{selectedVaccine.name}</h3>
+
+                    <div className="vaccine-detail-row">
+                      <span>موعد الجرعة</span>
+                      <strong>{selectedVaccine.ageLabel}</strong>
+                    </div>
+
+                    <div className="vaccine-detail-row">
+                      <span>رقم الجرعة</span>
+                      <strong>{selectedVaccine.dose}</strong>
+                    </div>
+
+                    {selectedVaccine.notes && (
+                      <div className="vaccine-detail-row">
+                        <span>ملاحظات</span>
+                        <strong>{selectedVaccine.notes}</strong>
+                      </div>
+                    )}
+
+                    <div className="notice-box">
+                      <AlertCircle size={17} />
+                      <span>
+                        ستُضاف المعلومات الطبية التفصيلية عن الأمراض التي يقي منها اللقاح
+                        وطريقة الإعطاء وموضع الحقن والتحذيرات بعد مراجعتها من المراجع الرسمية.
+                      </span>
+                    </div>
+                  </div>
+                </section>
+              )}
 
               <div className="children-note">
                 <AlertCircle size={17} />
