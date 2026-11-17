@@ -4,13 +4,23 @@
   "description": "نظام إدارة ومتابعة برنامج التلقيح في العراق",
   "lang": "ar",
   "dir": "rtl",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": "/iraqi-vaccine-guide/",
+  "scope": "/iraqi-vaccine-guide/",
   "display": "standalone",
   "background_color": "#f4f8fa",
   "theme_color": "#087f8c",
   "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+    {
+      "src": "/iraqi-vaccine-guide/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/iraqi-vaccine-guide/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
   ]
 }
