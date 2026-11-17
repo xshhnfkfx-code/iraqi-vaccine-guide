@@ -2,11 +2,17 @@ import { useEffect, useState, type FormEvent } from "react";
 import {
   Activity, AlertCircle, Baby, Bell, CheckCircle2, ChevronLeft,
   Cloud, CloudOff, Menu, ShieldCheck, Syringe, Users, X,
-  CalendarDays, Plus, Save, Search
+  CalendarDays, Plus, Save, Search, ClipboardList, ArrowRight,
+  Clock, Check, RotateCcw
 } from "lucide-react";
 import { navigation } from "./data/navigation";
 import type { SectionId, LocalRecord } from "./types";
 import { getAllLocalRecords, saveLocalRecord } from "./lib/db";
+import {
+  calculateChildVaccines,
+  getVaccineSummary,
+  type ChildVaccineDose
+} from "./lib/vaccineCalculator";
 
 interface ChildData {
   name: string;
@@ -22,8 +28,19 @@ interface ChildEntry {
   data: ChildData;
 }
 
+interface AdministeredDoseData {
+  childId: string;
+  doseId: string;
+  administeredDate: string;
+}
+
+interface AdministeredDoseEntry {
+  recordId: string;
+  data: AdministeredDoseData;
+}
+
 const metrics = [
-  { label: "اللقاحات في الدليل", value: "—", note: "بانتظار إدخال البيانات المعتمدة", icon: Syringe },
+  { label: "اللقاحات في الدليل", value: "—", note: "جدول التلقيح الوطني", icon: Syringe },
   { label: "الأطفال المسجلون", value: "0", note: "سجلات المتابعة", icon: Baby },
   { label: "الأطفال المتسربون", value: "0", note: "الحالات المفتوحة", icon: AlertCircle },
   { label: "الأطفال العائدون", value: "0", note: "عادوا إلى التلقيح", icon: CheckCircle2 },
@@ -46,6 +63,20 @@ const descriptions: Record<SectionId, string> = {
   reports: "إعداد التقارير وتصديرها وطباعتها.",
   settings: "إعدادات التطبيق والمزامنة والنسخ الاحتياطي."
 };
+
+function localToday(): string {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatDate(value: string): string {
+  if (!value) return "—";
+  const [year, month, day] = value.split("-");
+  return `${day}/${month}/${year}`;
+}
 
 function calculateAge(birthDate: string): string {
   const birth = new Date(`${birthDate}T00:00:00`);
@@ -74,14 +105,8 @@ function calculateAge(birthDate: string): string {
     months += 12;
   }
 
-  if (years > 0) {
-    return `${years} سنة و${months} شهر`;
-  }
-
-  if (months > 0) {
-    return `${months} شهر و${days} يوم`;
-  }
-
+  if (years > 0) return `${years} سنة و${months} شهر`;
+  if (months > 0) return `${months} شهر و${days} يوم`;
   return `${days} يوم`;
 }
 
@@ -91,6 +116,10 @@ function App() {
   const [online, setOnline] = useState(navigator.onLine);
   const [recordCount, setRecordCount] = useState(0);
   const [children, setChildren] = useState<ChildEntry[]>([]);
+  const [administeredDoses, setAdministeredDoses] = useState<AdministeredDoseEntry[]>([]);
+  const [selectedChildId, setSelectedChildId] = useState("");
+  const [doseToRecord, setDoseToRecord] = useState<ChildVaccineDose | null>(null);
+  const [doseDate, setDoseDate] = useState(localToday());
   const [showChildForm, setShowChildForm] = useState(false);
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
@@ -121,7 +150,15 @@ function App() {
             data: record.payload as ChildData
           }));
 
+        const savedDoses = records
+          .filter((record) => record.type === "vaccine-dose")
+          .map((record) => ({
+            recordId: record.id,
+            data: record.payload as AdministeredDoseData
+          }));
+
         setChildren(savedChildren);
+        setAdministeredDoses(savedDoses);
       })
       .catch(() => {
         setRecordCount(0);
@@ -135,10 +172,34 @@ function App() {
 
   const current = navigation.find((item) => item.id === active) ?? navigation[0];
 
+  const selectedChild = children.find(
+    (child) => child.recordId === selectedChildId
+  );
+
+  const selectedChildDoses = selectedChild
+    ? administeredDoses.filter(
+        (dose) => dose.data.childId === selectedChild.recordId
+      )
+    : [];
+
+  const administeredDoseIds = selectedChildDoses.map(
+    (dose) => dose.data.doseId
+  );
+
+  const childSchedule = selectedChild
+    ? calculateChildVaccines(
+        selectedChild.data.birthDate,
+        administeredDoseIds
+      )
+    : [];
+
+  const doseSummary = getVaccineSummary(childSchedule);
+
   function chooseSection(id: SectionId) {
     setActive(id);
     setMobileMenuOpen(false);
     setMessage("");
+    setDoseToRecord(null);
   }
 
   async function handleSaveChild(event: FormEvent<HTMLFormElement>) {
@@ -150,7 +211,7 @@ function App() {
       return;
     }
 
-    if (new Date(`${form.birthDate}T00:00:00`) > new Date()) {
+    if (form.birthDate > localToday()) {
       setMessage("تاريخ الميلاد لا يمكن أن يكون في المستقبل.");
       return;
     }
@@ -197,9 +258,89 @@ function App() {
     }
   }
 
+  async function handleSaveDose(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedChild || !doseToRecord || !doseDate) {
+      setMessage("يرجى اختيار تاريخ إعطاء الجرعة.");
+      return;
+    }
+
+    if (doseDate > localToday()) {
+      setMessage("تاريخ إعطاء الجرعة لا يمكن أن يكون في المستقبل.");
+      return;
+    }
+
+    const alreadyRecorded = administeredDoses.some(
+      (dose) =>
+        dose.data.childId === selectedChild.recordId &&
+        dose.data.doseId === doseToRecord.id
+    );
+
+    if (alreadyRecorded) {
+      setMessage("هذه الجرعة مسجلة مسبقاً لهذا الطفل.");
+      setDoseToRecord(null);
+      return;
+    }
+
+    setSaving(true);
+    setMessage("");
+
+    try {
+      const now = new Date().toISOString();
+      const id = crypto.randomUUID();
+
+      const doseData: AdministeredDoseData = {
+        childId: selectedChild.recordId,
+        doseId: doseToRecord.id,
+        administeredDate: doseDate
+      };
+
+      const record: LocalRecord = {
+        id,
+        type: "vaccine-dose",
+        payload: doseData,
+        createdAt: now,
+        updatedAt: now,
+        syncStatus: "pending"
+      };
+
+      await saveLocalRecord(record);
+
+      setAdministeredDoses((previous) => [
+        ...previous,
+        { recordId: id, data: doseData }
+      ]);
+
+      setRecordCount((count) => count + 1);
+      setDoseToRecord(null);
+      setMessage("تم تسجيل إعطاء الجرعة بنجاح.");
+    } catch {
+      setMessage("تعذر حفظ الجرعة. حاول مرة أخرى.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   const filteredChildren = children.filter((child) =>
     child.data.name.toLowerCase().includes(search.toLowerCase())
   );
+
+  function getDoseRecordedDate(doseId: string): string {
+    const record = selectedChildDoses.find(
+      (dose) => dose.data.doseId === doseId
+    );
+    return record ? record.data.administeredDate : "";
+  }
+
+  function getStatusClass(status: ChildVaccineDose["status"]): string {
+    switch (status) {
+      case "completed": return "dose-completed";
+      case "upcoming": return "dose-upcoming";
+      case "due": return "dose-due";
+      case "overdue": return "dose-overdue";
+    }
+  }
 
   return (
     <div className="app-shell">
@@ -295,6 +436,8 @@ function App() {
                 <button className="primary-button" onClick={() => {
                   setShowChildForm(!showChildForm);
                   setMessage("");
+                  setSelectedChildId("");
+                  setDoseToRecord(null);
                 }}>
                   <Plus size={17} />
                   تسجيل طفل جديد
@@ -323,7 +466,7 @@ function App() {
                       <input
                         type="date"
                         value={form.birthDate}
-                        max={new Date().toISOString().slice(0, 10)}
+                        max={localToday()}
                         onChange={(e) => setForm({ ...form, birthDate: e.target.value })}
                         required
                       />
@@ -389,6 +532,128 @@ function App() {
                 </form>
               )}
 
+              {selectedChild && (
+                <section className="panel child-schedule-panel">
+                  <div className="schedule-heading">
+                    <button
+                      className="secondary-button"
+                      onClick={() => {
+                        setSelectedChildId("");
+                        setDoseToRecord(null);
+                        setMessage("");
+                      }}
+                    >
+                      <ArrowRight size={15} /> العودة إلى قائمة الأطفال
+                    </button>
+                    <div>
+                      <h2>جدول جرعات الطفل</h2>
+                      <p>{selectedChild.data.name} · {calculateAge(selectedChild.data.birthDate)}</p>
+                    </div>
+                  </div>
+
+                  <div className="dose-summary-grid">
+                    <div className="dose-summary-card">
+                      <strong>{doseSummary.completed}</strong>
+                      <span>جرعات مكتملة</span>
+                    </div>
+                    <div className="dose-summary-card">
+                      <strong>{doseSummary.upcoming}</strong>
+                      <span>جرعات قادمة</span>
+                    </div>
+                    <div className="dose-summary-card">
+                      <strong>{doseSummary.due}</strong>
+                      <span>جرعات مستحقة</span>
+                    </div>
+                    <div className="dose-summary-card">
+                      <strong>{doseSummary.overdue}</strong>
+                      <span>جرعات متأخرة</span>
+                    </div>
+                  </div>
+
+                  {doseToRecord && (
+                    <form className="dose-record-form" onSubmit={handleSaveDose}>
+                      <h3>تسجيل إعطاء الجرعة</h3>
+                      <p>{doseToRecord.name} - الجرعة {doseToRecord.dose}</p>
+                      <label>
+                        تاريخ إعطاء الجرعة
+                        <input
+                          type="date"
+                          value={doseDate}
+                          max={localToday()}
+                          onChange={(e) => setDoseDate(e.target.value)}
+                          required
+                        />
+                      </label>
+                      <div className="form-actions">
+                        <button className="primary-button" type="submit" disabled={saving}>
+                          <Save size={16} />
+                          {saving ? "جارٍ الحفظ..." : "حفظ الجرعة"}
+                        </button>
+                        <button className="secondary-button" type="button" onClick={() => setDoseToRecord(null)}>
+                          إلغاء
+                        </button>
+                      </div>
+                    </form>
+                  )}
+
+                  <div className="vaccine-dose-list">
+                    {childSchedule.map((dose) => {
+                      const recordedDate = getDoseRecordedDate(dose.id);
+
+                      return (
+                        <article className="vaccine-dose-card" key={dose.id}>
+                          <div className="vaccine-dose-main">
+                            <div className="vaccine-dose-icon">
+                              {dose.status === "completed" ? <Check size={20} /> : <Syringe size={20} />}
+                            </div>
+                            <div className="vaccine-dose-info">
+                              <strong>{dose.name}</strong>
+                              <span>الجرعة: {dose.dose}</span>
+                              <small>العمر المحدد: {dose.ageLabel}</small>
+                              <small>
+                                {dose.ageLabel.includes("4 إلى 6")
+                                  ? `الفترة: ${formatDate(dose.dueDate)} إلى ${formatDate(dose.endDate)}`
+                                  : `الموعد المستهدف: ${formatDate(dose.dueDate)}`}
+                              </small>
+                              {recordedDate && (
+                                <small className="recorded-dose-date">
+                                  تاريخ الإعطاء الفعلي: {formatDate(recordedDate)}
+                                </small>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className={`dose-status ${getStatusClass(dose.status)}`}>
+                            {dose.statusLabel}
+                          </div>
+
+                          {dose.status !== "completed" && (
+                            <button
+                              className="dose-action-button"
+                              onClick={() => {
+                                setDoseToRecord(dose);
+                                setDoseDate(localToday());
+                                setMessage("");
+                              }}
+                            >
+                              <CheckCircle2 size={15} />
+                              تسجيل الجرعة
+                            </button>
+                          )}
+                        </article>
+                      );
+                    })}
+                  </div>
+
+                  <div className="children-note">
+                    <AlertCircle size={17} />
+                    <span>
+                      المواعيد محسوبة من تاريخ الميلاد وفق الجدول الذي زودتنا به. يجب مراجعة سجل الطفل والبطاقة التلقيحية قبل تسجيل أي جرعة، وتحديد تاريخ إعطائها الفعلي بدقة.
+                    </span>
+                  </div>
+                </section>
+              )}
+
               <div className="children-search">
                 <Search size={18} />
                 <input
@@ -416,7 +681,17 @@ function App() {
                         {child.data.guardian && <small>ولي الأمر: {child.data.guardian}</small>}
                         {child.data.center && <small>المركز الصحي: {child.data.center}</small>}
                       </div>
-                      <div className="child-card-status">مسجل</div>
+                      <button
+                        className="child-schedule-button"
+                        onClick={() => {
+                          setSelectedChildId(child.recordId);
+                          setDoseToRecord(null);
+                          setMessage("");
+                        }}
+                      >
+                        <ClipboardList size={16} />
+                        جدول الجرعات
+                      </button>
                     </article>
                   ))}
                 </div>
@@ -425,7 +700,7 @@ function App() {
               <div className="children-note">
                 <AlertCircle size={17} />
                 <span>
-                  حساب العمر متاح حالياً. سيتم تفعيل حساب الجرعات القادمة بعد إدخال جدول التلقيح المعتمد وسجل الجرعات الفعلية لكل طفل.
+                  يتم حفظ بيانات الأطفال والجرعات على هذا الجهاز فقط حالياً. لا توجد مزامنة مع خادم مركزي.
                 </span>
               </div>
             </section>
@@ -539,3 +814,4 @@ function App() {
 }
 
 export default App;
+
