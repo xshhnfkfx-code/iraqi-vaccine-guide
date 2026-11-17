@@ -8,6 +8,7 @@ import {
 import { navigation } from "./data/navigation";
 import type { SectionId } from "./types";
 import { getAllLocalRecords } from "./lib/db";
+import { vaccineSchedule } from "./data/vaccineSchedule";
 
 const metrics = [
   { label: "اللقاحات في الدليل", value: "—", note: "جدول التلقيح الوطني", icon: Syringe },
@@ -141,6 +142,13 @@ function App() {
 
   const ageResult = calculateAgeBetween(birthDate, comparisonDate);
 
+  const vaccineGroups = Array.from(
+    new Set(vaccineSchedule.map((item) => item.ageLabel))
+  ).map((ageLabel) => ({
+    ageLabel,
+    items: vaccineSchedule.filter((item) => item.ageLabel === ageLabel)
+  }));
+
   function chooseSection(id: SectionId) {
     setActive(id);
     setMobileMenuOpen(false);
@@ -257,7 +265,51 @@ function App() {
             </div>
           </section>
 
-          {active === "children" ? (
+          {active === "vaccines" ? (
+            <section className="vaccine-module">
+              <div className="panel-heading vaccine-heading">
+                <div>
+                  <h2>جدول اللقاحات الوطني</h2>
+                  <p>الجرعات مرتبة حسب العمر المحدد في الدليل</p>
+                </div>
+                <span className="muted-tag">{vaccineSchedule.length} جرعة / بند</span>
+              </div>
+
+              {vaccineGroups.map((group) => (
+                <section className="panel vaccine-age-group" key={group.ageLabel}>
+                  <div className="vaccine-age-title">
+                    <CalendarDays size={19} />
+                    <h3>{group.ageLabel}</h3>
+                    <span>{group.items.length}</span>
+                  </div>
+
+                  <div className="vaccine-dose-list">
+                    {group.items.map((item) => (
+                      <article className="vaccine-dose" key={item.id}>
+                        <div className="vaccine-dose-icon">
+                          <Syringe size={18} />
+                        </div>
+
+                        <div className="vaccine-dose-info">
+                          <strong>{item.name}</strong>
+                          <span>الجرعة: {item.dose}</span>
+                          {item.notes && <small>{item.notes}</small>}
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              ))}
+
+              <div className="children-note">
+                <AlertCircle size={17} />
+                <span>
+                  هذا عرض للبيانات المدرجة حالياً في ملف جدول اللقاحات داخل التطبيق.
+                  يُرجى اعتماد بطاقة التلقيح الرسمية وتعليمات وزارة الصحة عند إعطاء اللقاحات.
+                </span>
+              </div>
+            </section>
+          ) : active === "children" ? (
             <section className="children-module">
               <div className="children-toolbar">
                 <div>
