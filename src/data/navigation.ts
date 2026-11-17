@@ -1,6 +1,6 @@
 import {
   Activity, Baby, BarChart3, BookOpen, Building2, ClipboardList,
-  Database, FileText, LayoutDashboard, Map, Settings, Snowflake,
+  FileText, LayoutDashboard, Map, Settings, Snowflake,
   Syringe, Users, type LucideIcon
 } from "lucide-react";
 import type { SectionId } from "../types";
@@ -15,6 +15,7 @@ export interface NavigationItem {
 export const navigation: NavigationItem[] = [
   { id: "dashboard", title: "لوحة التحكم", subtitle: "المؤشرات العامة", icon: LayoutDashboard },
   { id: "vaccines", title: "قاعدة اللقاحات", subtitle: "بطاقات ومعلومات اللقاحات", icon: Syringe },
+  { id: "children", title: "متابعة الأطفال والجرعات", subtitle: "تسجيل الأطفال وحساب الجرعات القادمة", icon: Baby },
   { id: "administration", title: "دليل إعطاء اللقاحات", subtitle: "طرق ومواضع الإعطاء", icon: BookOpen },
   { id: "cold-chain", title: "سلسلة التبريد", subtitle: "الثلاجات ودرجات الحرارة", icon: Snowflake },
   { id: "vitamins", title: "فيتامين A وK", subtitle: "المعلومات والإرشادات", icon: Activity },
