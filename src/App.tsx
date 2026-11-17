@@ -2,12 +2,17 @@ import { useEffect, useState, type FormEvent } from "react";
 import {
   Activity, AlertCircle, Baby, Bell, CheckCircle2, ChevronLeft,
   Cloud, CloudOff, Menu, ShieldCheck, Syringe, Users, X,
-  CalendarDays, Plus, Save, Search, ClipboardList, ArrowRight
+  CalendarDays, Plus, Save, Search, ClipboardList, ArrowRight,
+  Pencil, Trash2
 } from "lucide-react";
 
 import { navigation } from "./data/navigation";
 import type { SectionId, LocalRecord } from "./types";
-import { getAllLocalRecords, saveLocalRecord } from "./lib/db";
+import {
+  getAllLocalRecords,
+  saveLocalRecord,
+  deleteLocalRecord
+} from "./lib/db";
 import { getNextVaccineAppointment } from "./lib/vaccineCalculator";
 
 interface ChildData {
@@ -103,6 +108,7 @@ function App() {
   const [children, setChildren] = useState<ChildEntry[]>([]);
   const [selectedChildId, setSelectedChildId] = useState("");
   const [showChildForm, setShowChildForm] = useState(false);
+  const [editingChildId, setEditingChildId] = useState("");
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -161,6 +167,27 @@ function App() {
     setMessage("");
   }
 
+  function resetChildForm() {
+    setForm({
+      name: "",
+      birthDate: "",
+      gender: "ذكر",
+      guardian: "",
+      phone: "",
+      center: ""
+    });
+    setEditingChildId("");
+    setShowChildForm(false);
+  }
+
+  function startEditingChild(child: ChildEntry) {
+    setForm({ ...child.data });
+    setEditingChildId(child.recordId);
+    setSelectedChildId("");
+    setShowChildForm(true);
+    setMessage("يمكنك تعديل بيانات الطفل ثم الضغط على حفظ التعديلات.");
+  }
+
   async function handleSaveChild(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage("");
@@ -179,7 +206,7 @@ function App() {
 
     try {
       const now = new Date().toISOString();
-      const id = crypto.randomUUID();
+      const id = editingChildId || crypto.randomUUID();
 
       const record: LocalRecord = {
         id,
@@ -192,12 +219,26 @@ function App() {
 
       await saveLocalRecord(record);
 
-      setChildren((previous) => [
-        { recordId: id, data: { ...form } },
-        ...previous
-      ]);
+      if (editingChildId) {
+        setChildren((previous) =>
+          previous.map((child) =>
+            child.recordId === editingChildId
+              ? { recordId: id, data: { ...form } }
+              : child
+          )
+        );
 
-      setRecordCount((count) => count + 1);
+        setMessage("تم تعديل بيانات الطفل بنجاح، وتم تحديث موعد اللقاح حسب تاريخ الميلاد الجديد.");
+        setSelectedChildId(id);
+      } else {
+        setChildren((previous) => [
+          { recordId: id, data: { ...form } },
+          ...previous
+        ]);
+
+        setRecordCount((count) => count + 1);
+        setMessage("تم حفظ بيانات الطفل بنجاح.");
+      }
 
       setForm({
         name: "",
@@ -208,12 +249,44 @@ function App() {
         center: ""
       });
 
+      setEditingChildId("");
       setShowChildForm(false);
-      setMessage("تم حفظ بيانات الطفل بنجاح.");
     } catch {
       setMessage("تعذر حفظ البيانات. حاول مرة أخرى.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleDeleteChild(child: ChildEntry) {
+    const confirmed = window.confirm(
+      `هل أنت متأكد من حذف بيانات الطفل "${child.data.name}"؟ لا يمكن التراجع عن هذا الحذف.`
+    );
+
+    if (!confirmed) return;
+
+    setMessage("");
+
+    try {
+      await deleteLocalRecord(child.recordId);
+
+      setChildren((previous) =>
+        previous.filter((item) => item.recordId !== child.recordId)
+      );
+
+      setRecordCount((count) => Math.max(0, count - 1));
+
+      if (selectedChildId === child.recordId) {
+        setSelectedChildId("");
+      }
+
+      if (editingChildId === child.recordId) {
+        resetChildForm();
+      }
+
+      setMessage("تم حذف بيانات الطفل بنجاح.");
+    } catch {
+      setMessage("تعذر حذف بيانات الطفل. حاول مرة أخرى.");
     }
   }
 
@@ -338,9 +411,10 @@ function App() {
                 <button
                   className="primary-button"
                   onClick={() => {
-                    setShowChildForm(!showChildForm);
-                    setMessage("");
+                    resetChildForm();
                     setSelectedChildId("");
+                    setMessage("");
+                    setShowChildForm(true);
                   }}
                 >
                   <Plus size={17} />
@@ -357,7 +431,9 @@ function App() {
                   className="child-form panel"
                   onSubmit={handleSaveChild}
                 >
-                  <h3>بيانات الطفل</h3>
+                  <h3>
+                    {editingChildId ? "تعديل بيانات الطفل" : "بيانات الطفل"}
+                  </h3>
 
                   <div className="child-fields">
                     <label>
@@ -448,13 +524,20 @@ function App() {
                       disabled={saving}
                     >
                       <Save size={16} />
-                      {saving ? "جارٍ الحفظ..." : "حفظ بيانات الطفل"}
+                      {saving
+                        ? "جارٍ الحفظ..."
+                        : editingChildId
+                          ? "حفظ التعديلات"
+                          : "حفظ بيانات الطفل"}
                     </button>
 
                     <button
                       className="secondary-button"
                       type="button"
-                      onClick={() => setShowChildForm(false)}
+                      onClick={() => {
+                        resetChildForm();
+                        setMessage("");
+                      }}
                     >
                       إلغاء
                     </button>
@@ -613,16 +696,36 @@ function App() {
                         )}
                       </div>
 
-                      <button
-                        className="child-schedule-button"
-                        onClick={() => {
-                          setSelectedChildId(child.recordId);
-                          setMessage("");
-                        }}
-                      >
-                        <ClipboardList size={16} />
-                        حساب الموعد القادم
-                      </button>
+                      <div className="child-card-actions">
+                        <button
+                          className="child-schedule-button"
+                          onClick={() => {
+                            setSelectedChildId(child.recordId);
+                            setMessage("");
+                          }}
+                        >
+                          <ClipboardList size={16} />
+                          حساب الموعد القادم
+                        </button>
+
+                        <button
+                          className="secondary-button"
+                          type="button"
+                          onClick={() => startEditingChild(child)}
+                        >
+                          <Pencil size={16} />
+                          تعديل
+                        </button>
+
+                        <button
+                          className="secondary-button"
+                          type="button"
+                          onClick={() => handleDeleteChild(child)}
+                        >
+                          <Trash2 size={16} />
+                          حذف
+                        </button>
+                      </div>
                     </article>
                   ))}
                 </div>
