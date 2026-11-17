@@ -42,32 +42,57 @@ function localToday(): string {
   return `${year}-${month}-${day}`;
 }
 
+function formatDate(value: string): string {
+  if (!value) return "";
+  const [year, month, day] = value.split("-");
+  return `${day}/${month}/${year}`;
+}
+
+function parseDateInput(value: string): string | null {
+  const match = value.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+
+  if (!match) return null;
+
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const year = Number(match[3]);
+
+  const date = new Date(year, month - 1, day);
+
+  if (
+    year < 1 ||
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
 function calculateAgeBetween(
   birthDate: string,
   comparisonDate: string
 ): string | null {
   if (!birthDate || !comparisonDate) return null;
 
-  const [by, bm, bd] = birthDate.split("-").map(Number);
-  const [ey, em, ed] = comparisonDate.split("-").map(Number);
+  const birthValue = parseDateInput(birthDate);
+  const comparisonValue = parseDateInput(comparisonDate);
+
+  if (!birthValue || !comparisonValue) {
+    return "اكتب التاريخ بصيغة يوم/شهر/سنة، مثال: 18/11/2020";
+  }
+
+  const [by, bm, bd] = birthValue.split("-").map(Number);
+  const [ey, em, ed] = comparisonValue.split("-").map(Number);
 
   const birth = new Date(by, bm - 1, bd);
   const end = new Date(ey, em - 1, ed);
 
-  if (
-    Number.isNaN(birth.getTime()) ||
-    Number.isNaN(end.getTime()) ||
-    birth.getFullYear() !== by ||
-    birth.getMonth() !== bm - 1 ||
-    birth.getDate() !== bd ||
-    end.getFullYear() !== ey ||
-    end.getMonth() !== em - 1 ||
-    end.getDate() !== ed
-  ) {
-    return null;
+  if (end < birth) {
+    return "التاريخ الثاني يسبق تاريخ الميلاد";
   }
-
-  if (end < birth) return "التاريخ الثاني يسبق تاريخ الميلاد";
 
   let years = ey - by;
   let months = em - bm;
@@ -87,12 +112,6 @@ function calculateAgeBetween(
   return `${years} سنة و ${months} شهر و ${days} يوم`;
 }
 
-function formatDate(value: string): string {
-  if (!value) return "—";
-  const [year, month, day] = value.split("-");
-  return `${day}/${month}/${year}`;
-}
-
 function App() {
   const [active, setActive] = useState<SectionId>("dashboard");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -100,7 +119,7 @@ function App() {
   const [recordCount, setRecordCount] = useState(0);
 
   const [birthDate, setBirthDate] = useState("");
-  const [comparisonDate, setComparisonDate] = useState(localToday());
+  const [comparisonDate, setComparisonDate] = useState(formatDate(localToday()));
 
   useEffect(() => {
     const update = () => setOnline(navigator.onLine);
@@ -129,7 +148,7 @@ function App() {
 
   function resetCalculator() {
     setBirthDate("");
-    setComparisonDate(localToday());
+    setComparisonDate(formatDate(localToday()));
   }
 
   return (
@@ -254,9 +273,10 @@ function App() {
                   <label>
                     تاريخ الميلاد الأول
                     <input
-                      type="date"
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="يوم/شهر/سنة مثال: 18/11/2020"
                       value={birthDate}
-                      max={localToday()}
                       onChange={(e) => setBirthDate(e.target.value)}
                     />
                   </label>
@@ -264,7 +284,9 @@ function App() {
                   <label>
                     التاريخ الثاني
                     <input
-                      type="date"
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="يوم/شهر/سنة مثال: 18/11/2026"
                       value={comparisonDate}
                       onChange={(e) => setComparisonDate(e.target.value)}
                     />
@@ -294,9 +316,9 @@ function App() {
               <div className="children-note">
                 <AlertCircle size={17} />
                 <span>
-                  يبدأ التاريخ الثاني بتاريخ اليوم تلقائياً، ويمكنك تغييره
-                  إلى أي تاريخ آخر. تتحدث نتيجة العمر تلقائياً عند تعديل
-                  أي من التاريخين.
+                  اكتب التاريخ بصيغة يوم/شهر/سنة، مثل 18/11/2020.
+                  يبدأ التاريخ الثاني بتاريخ اليوم تلقائياً، ويمكنك تغييره.
+                  تتحدث نتيجة العمر تلقائياً عند تعديل أي من التاريخين.
                 </span>
               </div>
             </section>
@@ -479,4 +501,3 @@ function App() {
 }
 
 export default App;
-
