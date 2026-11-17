@@ -3,21 +3,16 @@ import {
   type VaccineScheduleItem
 } from "../data/vaccineSchedule";
 
-export type VaccineStatus =
-  | "completed"
-  | "upcoming"
-  | "due"
-  | "overdue";
-
-export interface ChildVaccineDose {
-  id: string;
-  name: string;
-  dose: string;
-  ageLabel: string;
-  dueDate: string;
+export interface NextVaccineAppointment {
+  date: string;
   endDate: string;
-  status: VaccineStatus;
-  statusLabel: string;
+  ageLabel: string;
+  vaccines: {
+    id: string;
+    name: string;
+    dose: string;
+  }[];
+  isWindow: boolean;
 }
 
 function parseLocalDate(value: string): Date {
@@ -29,7 +24,6 @@ function formatDate(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
-
   return `${year}-${month}-${day}`;
 }
 
@@ -53,74 +47,44 @@ function addMonths(date: Date, months: number): Date {
   ).getDate();
 
   result.setDate(Math.min(originalDay, lastDay));
-
   return result;
 }
 
 function getDoseDates(
   birthDate: Date,
   item: VaccineScheduleItem
-): { start: Date; end: Date } {
+): { start: Date; end: Date; isWindow: boolean } {
   if (item.minAgeYears !== undefined) {
-    const start = addMonths(birthDate, item.minAgeYears * 12);
-    const end = addMonths(birthDate, (item.maxAgeYears ?? item.minAgeYears) * 12);
-
-    return { start, end };
+    return {
+      start: addMonths(birthDate, item.minAgeYears * 12),
+      end: addMonths(
+        birthDate,
+        (item.maxAgeYears ?? item.minAgeYears) * 12
+      ),
+      isWindow: true
+    };
   }
 
   if (item.ageMonths !== undefined) {
-    const start = addMonths(birthDate, item.ageMonths);
-    return { start, end: start };
+    const date = addMonths(birthDate, item.ageMonths);
+    return { start: date, end: date, isWindow: false };
   }
 
   const start = new Date(birthDate);
+  const isHepatitisB = item.id === "hep-b-0";
 
-  // جرعة التهاب الكبد خلال أول 24 ساعة
-  if (item.id === "hep-b-0") {
-    return { start, end: addDays(start, 1) };
-  }
-
-  // جرعات الأسبوع الأول
-  return { start, end: addDays(start, 7) };
+  return {
+    start,
+    end: addDays(start, isHepatitisB ? 1 : 7),
+    isWindow: true
+  };
 }
 
-function getStatus(
-  today: Date,
-  start: Date,
-  end: Date,
-  completed: boolean
-): VaccineStatus {
-  if (completed) return "completed";
-
-  if (today < start) return "upcoming";
-
-  if (today <= end) return "due";
-
-  return "overdue";
-}
-
-function getStatusLabel(status: VaccineStatus): string {
-  switch (status) {
-    case "completed":
-      return "تم إعطاء الجرعة";
-
-    case "upcoming":
-      return "قادمة";
-
-    case "due":
-      return "مستحقة";
-
-    case "overdue":
-      return "متأخرة";
-  }
-}
-
-export function calculateChildVaccines(
+export function getNextVaccineAppointment(
   birthDateValue: string,
-  administeredDoseIds: string[] = [],
   todayValue: Date = new Date()
-): ChildVaccineDose[] {
-  if (!birthDateValue) return [];
+): NextVaccineAppointment | null {
+  if (!birthDateValue) return null;
 
   const birthDate = parseLocalDate(birthDateValue);
 
@@ -130,41 +94,45 @@ export function calculateChildVaccines(
     todayValue.getDate()
   );
 
-  if (Number.isNaN(birthDate.getTime()) || birthDate > today) {
-    return [];
+  if (
+    Number.isNaN(birthDate.getTime()) ||
+    birthDate > today
+  ) {
+    return null;
   }
 
-  return vaccineSchedule.map((item) => {
-    const { start, end } = getDoseDates(birthDate, item);
+  const appointments = vaccineSchedule
+    .map((item) => {
+      const dates = getDoseDates(birthDate, item);
 
-    const completed = administeredDoseIds.includes(item.id);
+      return {
+        item,
+        ...dates
+      };
+    })
+    .filter(({ end }) => end >= today)
+    .sort((a, b) => a.start.getTime() - b.start.getTime());
 
-    const status = getStatus(
-      today,
-      start,
-      end,
-      completed
-    );
+  if (appointments.length === 0) return null;
 
-    return {
+  const first = appointments[0];
+
+  const sameAppointment = appointments.filter(
+    ({ start, end, item }) =>
+      start.getTime() === first.start.getTime() &&
+      end.getTime() === first.end.getTime() &&
+      item.ageLabel === first.item.ageLabel
+  );
+
+  return {
+    date: formatDate(first.start),
+    endDate: formatDate(first.end),
+    ageLabel: first.item.ageLabel,
+    isWindow: first.isWindow,
+    vaccines: sameAppointment.map(({ item }) => ({
       id: item.id,
       name: item.name,
-      dose: item.dose,
-      ageLabel: item.ageLabel,
-      dueDate: formatDate(start),
-      endDate: formatDate(end),
-      status,
-      statusLabel: getStatusLabel(status)
-    };
-  });
-}
-
-export function getVaccineSummary(doses: ChildVaccineDose[]) {
-  return {
-    total: doses.length,
-    completed: doses.filter(dose => dose.status === "completed").length,
-    upcoming: doses.filter(dose => dose.status === "upcoming").length,
-    due: doses.filter(dose => dose.status === "due").length,
-    overdue: doses.filter(dose => dose.status === "overdue").length
+      dose: item.dose
+    }))
   };
 }
