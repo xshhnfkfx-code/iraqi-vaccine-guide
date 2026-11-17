@@ -142,3 +142,257 @@ h1 { margin: 5px 0 4px; color: #18343d; font-size: 22px; font-weight: 800; }
   .connection-pill svg { width: 17px; height: 17px; }
   .quick-grid { grid-template-columns: 1fr; }
 }
+
+/* Children management */
+.children-module {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.children-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.children-toolbar h2 {
+  margin: 0;
+  color: #27444c;
+  font-size: 16px;
+}
+
+.children-toolbar p {
+  margin: 4px 0 0;
+  color: #8b9da2;
+  font-size: 11px;
+}
+
+.children-toolbar .primary-button,
+.form-actions .primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.child-form h3 {
+  margin: 0 0 17px;
+  color: #27444c;
+  font-size: 14px;
+}
+
+.child-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 15px;
+}
+
+.child-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: #526b72;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.child-fields input,
+.child-fields select,
+.children-search input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #e2ebee;
+  border-radius: 9px;
+  background: #fbfdfd;
+  color: #29464e;
+  padding: 11px;
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+}
+
+.child-fields input:focus,
+.child-fields select:focus,
+.children-search input:focus {
+  border-color: #0799a3;
+  box-shadow: 0 0 0 3px rgba(7,153,163,.08);
+}
+
+.age-preview {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 18px;
+  padding: 13px;
+  border-radius: 9px;
+  background: #eaf7f7;
+  color: #087f8c;
+  font-size: 11px;
+}
+
+.age-preview strong {
+  font-size: 12px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 9px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.secondary-button {
+  border: 1px solid #e1eaed;
+  border-radius: 9px;
+  background: white;
+  color: #647b82;
+  padding: 10px 18px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.children-message {
+  padding: 12px;
+  border-radius: 9px;
+  background: #eaf7f1;
+  color: #16845d;
+  font-size: 11px;
+}
+
+.children-search {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 12px;
+  border: 1px solid #e8eff1;
+  border-radius: 10px;
+  background: white;
+  color: #81969c;
+}
+
+.children-search input {
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+.children-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  padding: 38px 15px;
+  color: #0b8e97;
+  text-align: center;
+}
+
+.children-empty strong {
+  color: #536d74;
+  font-size: 12px;
+}
+
+.children-empty span {
+  color: #99a9ad;
+  font-size: 10px;
+}
+
+.children-list {
+  display: grid;
+  gap: 10px;
+}
+
+.child-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  padding: 15px;
+}
+
+.child-card-icon {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: #087f8c;
+  background: #eaf7f7;
+}
+
+.child-card-info {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.child-card-info strong {
+  color: #27444c;
+  font-size: 13px;
+}
+
+.child-card-info span {
+  color: #087f8c;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.child-card-info small {
+  color: #8c9da2;
+  font-size: 10px;
+}
+
+.child-card-status {
+  color: #16845d;
+  background: #eaf7f1;
+  border-radius: 7px;
+  padding: 5px 8px;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.children-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 12px;
+  border-radius: 9px;
+  background: #fff8e9;
+  color: #98712f;
+  font-size: 10px;
+  line-height: 1.9;
+}
+
+.children-note svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.primary-button:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+  .child-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .children-toolbar {
+    align-items: flex-start;
+  }
+
+  .children-toolbar .primary-button {
+    font-size: 10px;
+    padding: 9px 11px;
+  }
+
+  .child-card {
+    padding: 12px;
+  }
+}
+
