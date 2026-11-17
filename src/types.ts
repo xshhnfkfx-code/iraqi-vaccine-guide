@@ -1,6 +1,7 @@
 export type SectionId =
   | "dashboard"
   | "vaccines"
+  | "children"
   | "administration"
   | "cold-chain"
   | "vitamins"
