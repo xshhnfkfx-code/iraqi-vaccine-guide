@@ -151,10 +151,6 @@ function App() {
     items: vaccineSchedule.filter((item) => item.ageLabel === ageLabel)
   }));
 
-  const selectedVaccine = vaccineSchedule.find(
-    (item) => item.id === selectedVaccineId
-  );
-
   function chooseSection(id: SectionId) {
     setActive(id);
     setMobileMenuOpen(false);
@@ -305,70 +301,74 @@ function App() {
                           <button
                             type="button"
                             className="secondary-button"
-                            onClick={() => setSelectedVaccineId(item.id)}
+                            onClick={() =>
+                              setSelectedVaccineId(
+                                selectedVaccineId === item.id ? null : item.id
+                              )
+                            }
                           >
                             <Info size={16} />
-                            عرض التفاصيل
+                            {selectedVaccineId === item.id ? "إخفاء التفاصيل" : "عرض التفاصيل"}
                           </button>
                         </div>
                       </article>
+
+                      {selectedVaccineId === item.id && (
+                        <section className="panel vaccine-detail-panel">
+                          <div className="panel-heading">
+                            <div>
+                              <h2>تفاصيل الجرعة</h2>
+                              <p>المعلومات المسجلة في جدول اللقاحات</p>
+                            </div>
+
+                            <button
+                              type="button"
+                              className="icon-button"
+                              aria-label="إغلاق التفاصيل"
+                              onClick={() => setSelectedVaccineId(null)}
+                            >
+                              <X size={19} />
+                            </button>
+                          </div>
+
+                          <div className="vaccine-detail-content">
+                            <div className="vaccine-detail-icon">
+                              <Syringe size={25} />
+                            </div>
+
+                            <h3>{item.name}</h3>
+
+                            <div className="vaccine-detail-row">
+                              <span>موعد الجرعة</span>
+                              <strong>{item.ageLabel}</strong>
+                            </div>
+
+                            <div className="vaccine-detail-row">
+                              <span>رقم الجرعة</span>
+                              <strong>{item.dose}</strong>
+                            </div>
+
+                            {item.notes && (
+                              <div className="vaccine-detail-row">
+                                <span>ملاحظات</span>
+                                <strong>{item.notes}</strong>
+                              </div>
+                            )}
+
+                            <div className="notice-box">
+                              <AlertCircle size={17} />
+                              <span>
+                                ستُضاف المعلومات الطبية التفصيلية عن الأمراض التي يقي منها اللقاح
+                                وطريقة الإعطاء وموضع الحقن والتحذيرات بعد مراجعتها من المراجع الرسمية.
+                              </span>
+                            </div>
+                          </div>
+                        </section>
+                      )}
                     ))}
                   </div>
                 </section>
               ))}
-
-              {selectedVaccine && (
-                <section className="panel vaccine-detail-panel">
-                  <div className="panel-heading">
-                    <div>
-                      <h2>تفاصيل الجرعة</h2>
-                      <p>المعلومات المسجلة في جدول اللقاحات</p>
-                    </div>
-
-                    <button
-                      type="button"
-                      className="icon-button"
-                      aria-label="إغلاق التفاصيل"
-                      onClick={() => setSelectedVaccineId(null)}
-                    >
-                      <X size={19} />
-                    </button>
-                  </div>
-
-                  <div className="vaccine-detail-content">
-                    <div className="vaccine-detail-icon">
-                      <Syringe size={25} />
-                    </div>
-
-                    <h3>{selectedVaccine.name}</h3>
-
-                    <div className="vaccine-detail-row">
-                      <span>موعد الجرعة</span>
-                      <strong>{selectedVaccine.ageLabel}</strong>
-                    </div>
-
-                    <div className="vaccine-detail-row">
-                      <span>رقم الجرعة</span>
-                      <strong>{selectedVaccine.dose}</strong>
-                    </div>
-
-                    {selectedVaccine.notes && (
-                      <div className="vaccine-detail-row">
-                        <span>ملاحظات</span>
-                        <strong>{selectedVaccine.notes}</strong>
-                      </div>
-                    )}
-
-                    <div className="notice-box">
-                      <AlertCircle size={17} />
-                      <span>
-                        ستُضاف المعلومات الطبية التفصيلية عن الأمراض التي يقي منها اللقاح
-                        وطريقة الإعطاء وموضع الحقن والتحذيرات بعد مراجعتها من المراجع الرسمية.
-                      </span>
-                    </div>
-                  </div>
-                </section>
-              )}
 
               <div className="children-note">
                 <AlertCircle size={17} />
@@ -622,3 +622,4 @@ function App() {
 }
 
 export default App;
+
