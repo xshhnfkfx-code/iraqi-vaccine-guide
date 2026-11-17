@@ -11,8 +11,10 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch((error) => {
-      console.error("تعذر تسجيل Service Worker:", error);
-    });
+    navigator.serviceWorker
+      .register("/iraqi-vaccine-guide/sw.js")
+      .catch((error) => {
+        console.error("تعذر تسجيل Service Worker:", error);
+      });
   });
 }
