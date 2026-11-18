@@ -10,6 +10,7 @@ import type { SectionId } from "./types";
 import { getAllLocalRecords } from "./lib/db";
 import { vaccineSchedule } from "./data/vaccineSchedule";
 import { vaccineDetails } from "./data/vaccineDetails";
+import ColdChain from "./ColdChain";
 
 const metrics = [
   { label: "اللقاحات في الدليل", value: "—", note: "جدول التلقيح الوطني", icon: Syringe },
@@ -570,6 +571,8 @@ function App() {
                 </span>
               </div>
             </section>
+          ) : active === "cold-chain" ? (
+            <ColdChain />
           ) : active === "dashboard" ? (
             <>
               <section className="metrics-grid">
