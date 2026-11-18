@@ -1,38 +1,36 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Search,
-  Pill,
-  Wifi,
-  WifiOff,
-  AlertTriangle,
-  ShieldCheck,
-  HeartPulse,
-  X,
-  ChevronLeft,
-  Activity,
-  Stethoscope,
-  BookOpen,
-  RotateCcw,
-  Info,
-  Database
+  Search, Pill, Wifi, WifiOff, AlertTriangle, ShieldCheck,
+  HeartPulse, X, ChevronLeft, Activity, Stethoscope,
+  BookOpen, RotateCcw, Database, Camera, ImagePlus,
+  ScanSearch, Loader2
 } from "lucide-react";
 
 import { medicines } from "./data/medicineDatabase";
 import type { Medicine } from "./data/medicineDatabase";
+import { createWorker } from "tesseract.js";
 
 export default function App() {
   const [search, setSearch] = useState("");
   const [age, setAge] = useState("");
   const [weight, setWeight] = useState("");
   const [selected, setSelected] = useState<Medicine | null>(null);
-
   const [online, setOnline] = useState(
     typeof navigator !== "undefined" ? navigator.onLine : false
   );
 
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState("");
+  const [scanText, setScanText] = useState("");
+  const [scanMatches, setScanMatches] = useState<Medicine[]>([]);
+  const [scanning, setScanning] = useState(false);
+  const [scanError, setScanError] = useState("");
+
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     const update = () => setOnline(navigator.onLine);
-
     window.addEventListener("online", update);
     window.addEventListener("offline", update);
 
@@ -50,12 +48,13 @@ export default function App() {
       .replace(/ى/g, "ي")
       .replace(/ة/g, "ه")
       .replace(/[\u064B-\u065F\u0670]/g, "")
+      .replace(/[^a-z0-9\u0600-\u06FF\s]/g, " ")
+      .replace(/\s+/g, " ")
       .trim();
   }
 
   const results = useMemo(() => {
     const query = normalize(search);
-
     if (!query) return [];
 
     return medicines.filter((medicine) => {
@@ -76,6 +75,108 @@ export default function App() {
     setAge("");
     setWeight("");
     setSelected(null);
+    setImageFile(null);
+    setImagePreview("");
+    setScanText("");
+    setScanMatches([]);
+    setScanError("");
+  }
+
+  function handleImage(file?: File) {
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setScanError("الرجاء اختيار ملف صورة صالح.");
+      return;
+    }
+
+    setImageFile(file);
+    setScanText("");
+    setScanMatches([]);
+    setScanError("");
+    setSelected(null);
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setImagePreview(String(reader.result || ""));
+    };
+    reader.onerror = () => {
+      setScanError("تعذر فتح الصورة. حاول اختيار صورة أخرى.");
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function findMedicines(text: string): Medicine[] {
+    const normalizedText = normalize(text);
+
+    if (!normalizedText) return [];
+
+    return medicines.filter((medicine) => {
+      const name = normalize(medicine.name);
+      const english = normalize(medicine.english);
+
+      return (
+        (name.length > 2 && normalizedText.includes(name)) ||
+        (english.length > 2 && normalizedText.includes(english))
+      );
+    });
+  }
+
+  async function recognizeMedicine() {
+    if (!imageFile) {
+      setScanError("التقط صورة أو اختر صورة من المعرض أولاً.");
+      return;
+    }
+
+    if (!online && !navigator.onLine) {
+      // يمكن استخدام ملفات اللغة المخزنة مؤقتاً بعد تحميلها سابقاً.
+      // إذا لم تكن الملفات مخزنة، سيظهر خطأ من محرك القراءة.
+    }
+
+    setScanning(true);
+    setScanError("");
+    setScanText("");
+    setScanMatches([]);
+
+    let worker: Awaited<ReturnType<typeof createWorker>> | null = null;
+
+    try {
+      worker = await createWorker("eng+ara", 1, {
+        cacheMethod: "write"
+      });
+
+      const result = await worker.recognize(imageFile);
+      const extractedText = result.data.text.trim();
+
+      setScanText(extractedText);
+
+      if (!extractedText) {
+        setScanError(
+          "لم يتمكن التطبيق من قراءة النص. حاول تصوير العلبة بصورة أوضح."
+        );
+      } else {
+        const matches = findMedicines(extractedText);
+        setScanMatches(matches);
+
+        if (matches.length === 0) {
+          setScanError(
+            "تمت قراءة النص، لكن لم نجد اسماً مطابقاً في قاعدة الأدوية المحلية. يمكنك البحث يدوياً بالاسم."
+          );
+        }
+      }
+    } catch (error) {
+      console.error(error);
+      setScanError(
+        online
+          ? "حدث خطأ أثناء قراءة الصورة. تحقق من الاتصال بالإنترنت وحاول مجدداً."
+          : "تعذر تشغيل قراءة الصور دون إنترنت. يجب تحميل ملفات اللغة ومحرك القراءة أولاً أثناء الاتصال بالإنترنت."
+      );
+    } finally {
+      if (worker) {
+        await worker.terminate();
+      }
+      setScanning(false);
+    }
   }
 
   return (
@@ -89,9 +190,9 @@ export default function App() {
           font-family: Arial, Tahoma, sans-serif;
         }
 
-        button, input {
-          font: inherit;
-        }
+        button, input { font: inherit; }
+
+        button { cursor: pointer; }
 
         .medicine-app {
           min-height: 100vh;
@@ -151,9 +252,7 @@ export default function App() {
           white-space: nowrap;
         }
 
-        .med-intro {
-          margin-top: 30px;
-        }
+        .med-intro { margin-top: 30px; }
 
         .med-intro h1 {
           font-size: 25px;
@@ -247,11 +346,6 @@ export default function App() {
           color: white;
           background: #0878b4;
           font-weight: bold;
-          cursor: pointer;
-        }
-
-        .med-search-button:active {
-          opacity: .85;
         }
 
         .med-reset {
@@ -264,7 +358,6 @@ export default function App() {
           color: #66788e;
           padding: 13px;
           margin: 0 auto;
-          cursor: pointer;
         }
 
         .med-result-title {
@@ -296,9 +389,7 @@ export default function App() {
           border-bottom: 1px solid #edf1f5;
         }
 
-        .med-result:last-child {
-          border-bottom: 0;
-        }
+        .med-result:last-child { border-bottom: 0; }
 
         .med-pill-icon {
           width: 43px;
@@ -336,7 +427,6 @@ export default function App() {
           display: flex;
           align-items: center;
           gap: 3px;
-          cursor: pointer;
           font-size: 12px;
         }
 
@@ -347,9 +437,7 @@ export default function App() {
           margin-bottom: 17px;
         }
 
-        .med-detail-head h2 {
-          margin: 0;
-        }
+        .med-detail-head h2 { margin: 0; }
 
         .med-detail-head p {
           color: #77869a;
@@ -361,7 +449,6 @@ export default function App() {
           border: 0;
           background: transparent;
           color: #718096;
-          cursor: pointer;
         }
 
         .med-detail-section {
@@ -425,27 +512,94 @@ export default function App() {
           line-height: 1.8;
         }
 
+        .med-photo-buttons {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+          margin-top: 15px;
+        }
+
+        .med-photo-button {
+          border: 1px solid #dce8f1;
+          border-radius: 12px;
+          padding: 15px 8px;
+          background: #f5faff;
+          color: #0878b4;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          font-weight: bold;
+        }
+
+        .med-photo-button:active {
+          background: #e5f2fb;
+        }
+
+        .med-preview {
+          width: 100%;
+          max-height: 280px;
+          object-fit: contain;
+          border-radius: 12px;
+          background: #f1f4f8;
+          margin-top: 15px;
+        }
+
+        .med-scan-button {
+          width: 100%;
+          border: 0;
+          border-radius: 11px;
+          padding: 14px;
+          margin-top: 13px;
+          color: white;
+          background: #0878b4;
+          font-weight: bold;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .med-scan-button:disabled {
+          opacity: .55;
+          cursor: not-allowed;
+        }
+
+        .med-scan-error {
+          background: #fff5ed;
+          color: #965327;
+          border: 1px solid #f2ddcb;
+          padding: 12px;
+          border-radius: 10px;
+          font-size: 13px;
+          line-height: 1.8;
+          margin-top: 12px;
+        }
+
+        .med-scan-text {
+          background: #f6f8fb;
+          padding: 12px;
+          border-radius: 10px;
+          font-size: 13px;
+          line-height: 1.9;
+          color: #52647a;
+          white-space: pre-wrap;
+          overflow-wrap: anywhere;
+          margin-top: 12px;
+        }
+
+        .med-hidden-input { display: none; }
+
         @media(max-width:520px) {
           .med-fields {
             grid-template-columns: 1fr;
             gap: 0;
           }
 
-          .med-brand strong {
-            font-size: 16px;
-          }
-
-          .med-intro h1 {
-            font-size: 22px;
-          }
-
-          .med-panel {
-            padding: 15px;
-          }
-
-          .med-open span {
-            display: none;
-          }
+          .med-brand strong { font-size: 16px; }
+          .med-intro h1 { font-size: 22px; }
+          .med-panel { padding: 15px; }
+          .med-open span { display: none; }
         }
       `}</style>
 
@@ -455,7 +609,6 @@ export default function App() {
             <div className="med-logo">
               <Pill size={27} />
             </div>
-
             <div>
               <strong>دليل الأدوية الشامل</strong>
               <small>Medicine Guide</small>
@@ -471,13 +624,159 @@ export default function App() {
         <div className="med-intro">
           <h1>مرجعك الدوائي في مكان واحد</h1>
           <p>
-            ابحث عن العلاج واعرف استخداماته ومعلوماته
-            والتحذيرات المتعلقة به.
+            ابحث عن العلاج أو التقط صورة لعلبته لمعرفة المعلومات المتاحة.
           </p>
         </div>
       </header>
 
       <main className="med-container">
+
+        <section className="med-panel">
+          <h2>
+            <ScanSearch
+              size={20}
+              style={{ verticalAlign: "middle", marginLeft: 7 }}
+            />
+            التعرف على الدواء بالتصوير
+          </h2>
+
+          <p className="med-subtitle">
+            صوّر علبة الدواء أو اختر صورة محفوظة في هاتفك لقراءة الاسم
+            ومطابقته مع قاعدة الأدوية.
+          </p>
+
+          <input
+            ref={cameraRef}
+            className="med-hidden-input"
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={(e) => handleImage(e.target.files?.[0])}
+          />
+
+          <input
+            ref={galleryRef}
+            className="med-hidden-input"
+            type="file"
+            accept="image/*"
+            onChange={(e) => handleImage(e.target.files?.[0])}
+          />
+
+          <div className="med-photo-buttons">
+            <button
+              className="med-photo-button"
+              onClick={() => cameraRef.current?.click()}
+            >
+              <Camera size={21} />
+              تصوير الدواء
+            </button>
+
+            <button
+              className="med-photo-button"
+              onClick={() => galleryRef.current?.click()}
+            >
+              <ImagePlus size={21} />
+              معرض الصور
+            </button>
+          </div>
+
+          {imagePreview && (
+            <>
+              <img
+                src={imagePreview}
+                alt="صورة الدواء المختار"
+                className="med-preview"
+              />
+
+              <button
+                className="med-scan-button"
+                onClick={recognizeMedicine}
+                disabled={scanning}
+              >
+                {scanning ? (
+                  <>
+                    <Loader2 size={19} />
+                    جارٍ قراءة الصورة...
+                  </>
+                ) : (
+                  <>
+                    <ScanSearch size={19} />
+                    اقرأ اسم الدواء
+                  </>
+                )}
+              </button>
+            </>
+          )}
+
+          {scanError && (
+            <div className="med-scan-error">
+              <AlertTriangle
+                size={17}
+                style={{ verticalAlign: "middle", marginLeft: 5 }}
+              />
+              {scanError}
+            </div>
+          )}
+
+          {scanText && (
+            <div className="med-scan-text">
+              <strong>النص الذي تمت قراءته:</strong>
+              {"\n"}
+              {scanText}
+
+              <button
+                className="med-scan-button"
+                onClick={() => {
+                  setSearch(scanText);
+                  setSelected(null);
+                }}
+              >
+                <Search size={17} />
+                البحث بالنص المقروء
+              </button>
+            </div>
+          )}
+
+          {scanMatches.length > 0 && (
+            <div style={{ marginTop: 17 }}>
+              <div className="med-result-title">
+                <h2>الأدوية المطابقة</h2>
+                <span className="med-count">
+                  {scanMatches.length} نتيجة
+                </span>
+              </div>
+
+              {scanMatches.map((medicine) => (
+                <article className="med-result" key={medicine.id}>
+                  <div className="med-pill-icon">
+                    <Pill size={21} />
+                  </div>
+
+                  <div className="med-result-info">
+                    <strong>{medicine.name}</strong>
+                    <small>
+                      {medicine.english} · {medicine.category}
+                    </small>
+                  </div>
+
+                  <button
+                    className="med-open"
+                    onClick={() => setSelected(medicine)}
+                  >
+                    <span>التفاصيل</span>
+                    <ChevronLeft size={16} />
+                  </button>
+                </article>
+              ))}
+            </div>
+          )}
+
+          <p className="med-subtitle" style={{ marginTop: 14, marginBottom: 0 }}>
+            قراءة الصور تعتمد على وضوح الصورة وملفات اللغة المتاحة.
+            قد لا يتعرف التطبيق على بعض الأسماء أو التركيبات.
+          </p>
+        </section>
+
         <section className="med-panel">
           <h2>البحث عن دواء</h2>
 
@@ -489,7 +788,6 @@ export default function App() {
 
           <div className="med-input-wrap">
             <Search size={20} />
-
             <input
               type="search"
               value={search}
@@ -516,13 +814,9 @@ export default function App() {
 
           <div className="med-fields">
             <div>
-              <label className="med-label">
-                عمر الشخص (بالسنوات)
-              </label>
-
+              <label className="med-label">عمر الشخص (بالسنوات)</label>
               <div className="med-input-wrap">
                 <Activity size={18} />
-
                 <input
                   type="number"
                   min="0"
@@ -536,10 +830,8 @@ export default function App() {
 
             <div>
               <label className="med-label">الوزن (كغم)</label>
-
               <div className="med-input-wrap">
                 <HeartPulse size={18} />
-
                 <input
                   type="number"
                   min="0"
@@ -596,7 +888,6 @@ export default function App() {
                 <Stethoscope size={18} />
                 الاستخدامات الطبية
               </h3>
-
               <ul>
                 {selected.uses.map((item, i) => (
                   <li key={i}>{item}</li>
@@ -609,7 +900,6 @@ export default function App() {
                 <AlertTriangle size={18} />
                 التحذيرات والاحتياطات
               </h3>
-
               <ul>
                 {selected.warnings.map((item, i) => (
                   <li key={i}>{item}</li>
@@ -644,7 +934,6 @@ export default function App() {
 
             <div className="med-warning">
               <AlertTriangle size={20} />
-
               <span>
                 لا يمكن تحديد جرعة آمنة من الاسم والعمر وحدهما.
                 يجب مراعاة الوزن والتركيز والشكل الدوائي والتشخيص
@@ -688,14 +977,12 @@ export default function App() {
             ) : (
               <div className="med-empty">
                 <Search size={30} />
-
                 <p>
                   لم نعثر على الدواء في قاعدة البيانات المحلية.
                 </p>
-
                 <small>
                   {online
-                    ? "يمكن إضافة البحث الدوائي عبر الإنترنت في مرحلة ربط المصادر."
+                    ? "يمكن إضافة مصادر دوائية عبر الإنترنت في مرحلة لاحقة."
                     : "اتصل بالإنترنت أو أضف الدواء إلى قاعدة البيانات المحلية عند توفر معلومات موثوقة."}
                 </small>
               </div>
@@ -707,7 +994,7 @@ export default function App() {
               <BookOpen size={35} />
               <h2>ابدأ البحث عن علاج</h2>
               <p>
-                اكتب اسم الدواء في مربع البحث لعرض المعلومات المتاحة.
+                اكتب اسم الدواء أو استخدم ميزة التصوير.
               </p>
             </div>
           </section>
@@ -718,10 +1005,9 @@ export default function App() {
             size={19}
             style={{ verticalAlign: "middle", marginLeft: 7 }}
           />
-
-          المعلومات المعروضة إرشادية. تحتوي هذه النسخة على قاعدة
-          أولية محدودة، وسيتم توسيعها وربطها بمصادر طبية موثوقة
-          في المراحل التالية.
+          المعلومات المعروضة إرشادية. هذه النسخة تحتوي على قاعدة
+          أولية محدودة، ولا يجوز الاعتماد على التعرف بالصورة وحده
+          لتحديد دواء أو جرعته.
         </section>
 
         <section className="med-panel">
@@ -731,7 +1017,6 @@ export default function App() {
             gap: 10
           }}>
             <Database size={20} color="#0878b4" />
-
             <div>
               <strong>قاعدة الأدوية المحلية</strong>
               <p style={{
