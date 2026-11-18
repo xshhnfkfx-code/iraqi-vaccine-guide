@@ -2,7 +2,7 @@ import { Fragment, useEffect, useState } from "react";
 import {
   Activity, AlertCircle, Baby, Bell, CheckCircle2, ChevronLeft,
   Cloud, CloudOff, Menu, ShieldCheck, Syringe, Users, X,
-  CalendarDays, RotateCcw, Info
+  CalendarDays, RotateCcw, Info, Search
 } from "lucide-react";
 
 import { navigation } from "./data/navigation";
@@ -114,6 +114,17 @@ function calculateAgeBetween(
   return `${years} سنة و ${months} شهر و ${days} يوم`;
 }
 
+function normalizeSearchText(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFKC")
+    .replace(/[أإآ]/g, "ا")
+    .replace(/ى/g, "ي")
+    .replace(/ة/g, "ه")
+    .replace(/[\u064B-\u065F\u0670]/g, "")
+    .trim();
+}
+
 function App() {
   const [active, setActive] = useState<SectionId>("dashboard");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -124,6 +135,7 @@ function App() {
   const [comparisonDate, setComparisonDate] = useState(formatDate(localToday()));
 
   const [selectedVaccineId, setSelectedVaccineId] = useState<string | null>(null);
+  const [vaccineSearch, setVaccineSearch] = useState("");
 
   useEffect(() => {
     const update = () => setOnline(navigator.onLine);
@@ -152,10 +164,42 @@ function App() {
     items: vaccineSchedule.filter((item) => item.ageLabel === ageLabel)
   }));
 
+  const normalizedQuery = normalizeSearchText(vaccineSearch);
+
+  const filteredVaccineGroups = vaccineGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => {
+        if (!normalizedQuery) return true;
+
+        const detail = vaccineDetails[item.id];
+
+        const searchableText = [
+          item.id,
+          item.name,
+          item.dose,
+          item.ageLabel,
+          item.notes ?? "",
+          detail?.description ?? "",
+          detail?.importance ?? "",
+          ...(detail?.protectsAgainst ?? [])
+        ].join(" ");
+
+        return normalizeSearchText(searchableText).includes(normalizedQuery);
+      })
+    }))
+    .filter((group) => group.items.length > 0);
+
+  const searchResultCount = filteredVaccineGroups.reduce(
+    (total, group) => total + group.items.length,
+    0
+  );
+
   function chooseSection(id: SectionId) {
     setActive(id);
     setMobileMenuOpen(false);
     setSelectedVaccineId(null);
+    setVaccineSearch("");
   }
 
   function resetCalculator() {
@@ -274,136 +318,184 @@ function App() {
               <div className="panel-heading vaccine-heading">
                 <div>
                   <h2>جدول اللقاحات الوطني</h2>
-                  <p>اضغط على عرض التفاصيل لمعرفة معلومات كل جرعة</p>
+                  <p>ابحث عن اسم اللقاح أو الجرعة للوصول إلى معلوماتها بسرعة</p>
                 </div>
                 <span className="muted-tag">{vaccineSchedule.length} جرعة / بند</span>
               </div>
 
-              {vaccineGroups.map((group) => (
-                <section className="panel vaccine-age-group" key={group.ageLabel}>
-                  <div className="vaccine-age-title">
-                    <CalendarDays size={19} />
-                    <h3>{group.ageLabel}</h3>
-                    <span>{group.items.length}</span>
-                  </div>
+              <div className="children-search vaccine-search">
+                <Search size={19} />
+                <input
+                  type="search"
+                  value={vaccineSearch}
+                  onChange={(e) => {
+                    setVaccineSearch(e.target.value);
+                    setSelectedVaccineId(null);
+                  }}
+                  placeholder="ابحث عن لقاح... مثال: شلل الأطفال، OPV، الخماسي، MMR"
+                  aria-label="البحث عن اللقاحات"
+                />
+                {vaccineSearch && (
+                  <button
+                    type="button"
+                    className="icon-button"
+                    aria-label="مسح البحث"
+                    onClick={() => {
+                      setVaccineSearch("");
+                      setSelectedVaccineId(null);
+                    }}
+                  >
+                    <X size={18} />
+                  </button>
+                )}
+              </div>
 
-                  <div className="vaccine-dose-list">
-                    {group.items.map((item) => (
-                      <Fragment key={item.id}>
-                        <article className="vaccine-dose">
-                          <div className="vaccine-dose-icon">
-                            <Syringe size={18} />
-                          </div>
+              {vaccineSearch && (
+                <p className="vaccine-search-count">
+                  عدد النتائج: {searchResultCount}
+                </p>
+              )}
 
-                          <div className="vaccine-dose-info">
-                            <strong>{item.name}</strong>
-                            <span>الجرعة: {item.dose}</span>
-                            {item.notes && <small>{item.notes}</small>}
+              {filteredVaccineGroups.length > 0 ? (
+                filteredVaccineGroups.map((group) => (
+                  <section className="panel vaccine-age-group" key={group.ageLabel}>
+                    <div className="vaccine-age-title">
+                      <CalendarDays size={19} />
+                      <h3>{group.ageLabel}</h3>
+                      <span>{group.items.length}</span>
+                    </div>
 
-                            <button
-                              type="button"
-                              className="secondary-button"
-                              onClick={() =>
-                                setSelectedVaccineId(
-                                  selectedVaccineId === item.id ? null : item.id
-                                )
-                              }
-                            >
-                              <Info size={16} />
-                              {selectedVaccineId === item.id
-                                ? "إخفاء التفاصيل"
-                                : "عرض التفاصيل"}
-                            </button>
-                          </div>
-                        </article>
+                    <div className="vaccine-dose-list">
+                      {group.items.map((item) => (
+                        <Fragment key={item.id}>
+                          <article className="vaccine-dose">
+                            <div className="vaccine-dose-icon">
+                              <Syringe size={18} />
+                            </div>
 
-                        {selectedVaccineId === item.id && (
-                          <section className="panel vaccine-detail-panel">
-                            <div className="panel-heading">
-                              <div>
-                                <h2>تفاصيل الجرعة</h2>
-                                <p>المعلومات المسجلة في دليل اللقاحات</p>
-                              </div>
+                            <div className="vaccine-dose-info">
+                              <strong>{item.name}</strong>
+                              <span>الجرعة: {item.dose}</span>
+                              {item.notes && <small>{item.notes}</small>}
 
                               <button
                                 type="button"
-                                className="icon-button"
-                                aria-label="إغلاق التفاصيل"
-                                onClick={() => setSelectedVaccineId(null)}
+                                className="secondary-button"
+                                onClick={() =>
+                                  setSelectedVaccineId(
+                                    selectedVaccineId === item.id ? null : item.id
+                                  )
+                                }
                               >
-                                <X size={19} />
+                                <Info size={16} />
+                                {selectedVaccineId === item.id
+                                  ? "إخفاء التفاصيل"
+                                  : "عرض التفاصيل"}
                               </button>
                             </div>
+                          </article>
 
-                            <div className="vaccine-detail-content">
-                              <div className="vaccine-detail-icon">
-                                <Syringe size={25} />
+                          {selectedVaccineId === item.id && (
+                            <section className="panel vaccine-detail-panel">
+                              <div className="panel-heading">
+                                <div>
+                                  <h2>تفاصيل الجرعة</h2>
+                                  <p>المعلومات المسجلة في دليل اللقاحات</p>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  className="icon-button"
+                                  aria-label="إغلاق التفاصيل"
+                                  onClick={() => setSelectedVaccineId(null)}
+                                >
+                                  <X size={19} />
+                                </button>
                               </div>
 
-                              <h3>{item.name}</h3>
+                              <div className="vaccine-detail-content">
+                                <div className="vaccine-detail-icon">
+                                  <Syringe size={25} />
+                                </div>
 
-                              <div className="vaccine-detail-row">
-                                <span>موعد الجرعة</span>
-                                <strong>{item.ageLabel}</strong>
-                              </div>
+                                <h3>{item.name}</h3>
 
-                              <div className="vaccine-detail-row">
-                                <span>رقم الجرعة</span>
-                                <strong>{item.dose}</strong>
-                              </div>
-
-                              {item.notes && (
                                 <div className="vaccine-detail-row">
-                                  <span>ملاحظات</span>
-                                  <strong>{item.notes}</strong>
+                                  <span>موعد الجرعة</span>
+                                  <strong>{item.ageLabel}</strong>
                                 </div>
-                              )}
 
-                              {vaccineDetails[item.id] ? (
-                                <>
-                                  <div className="vaccine-detail-description">
-                                    <h4>ما هو هذا اللقاح؟</h4>
-                                    <p>{vaccineDetails[item.id].description}</p>
-                                  </div>
+                                <div className="vaccine-detail-row">
+                                  <span>رقم الجرعة</span>
+                                  <strong>{item.dose}</strong>
+                                </div>
 
-                                  <div className="vaccine-detail-description">
-                                    <h4>الأمراض التي يقي منها</h4>
-                                    <ul>
-                                      {vaccineDetails[item.id].protectsAgainst.map(
-                                        (disease, index) => (
-                                          <li key={index}>{disease}</li>
-                                        )
-                                      )}
-                                    </ul>
-                                  </div>
-
-                                  <div className="vaccine-detail-description">
-                                    <h4>أهمية اللقاح</h4>
-                                    <p>{vaccineDetails[item.id].importance}</p>
-                                  </div>
-
+                                {item.notes && (
                                   <div className="vaccine-detail-row">
-                                    <span>المصدر</span>
-                                    <strong>{vaccineDetails[item.id].source}</strong>
+                                    <span>ملاحظات</span>
+                                    <strong>{item.notes}</strong>
                                   </div>
-                                </>
-                              ) : (
-                                <div className="notice-box">
-                                  <AlertCircle size={17} />
-                                  <span>
-                                    لم تتم إضافة المعلومات الطبية التفصيلية لهذا اللقاح
-                                    بعد. ستتم إضافتها بعد مراجعة المراجع الرسمية.
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          </section>
-                        )}
-                      </Fragment>
-                    ))}
-                  </div>
-                </section>
-              ))}
+                                )}
+
+                                {vaccineDetails[item.id] ? (
+                                  <>
+                                    <div className="vaccine-detail-description">
+                                      <h4>ما هو هذا اللقاح؟</h4>
+                                      <p>{vaccineDetails[item.id].description}</p>
+                                    </div>
+
+                                    <div className="vaccine-detail-description">
+                                      <h4>الأمراض التي يقي منها</h4>
+                                      <ul>
+                                        {vaccineDetails[item.id].protectsAgainst.map(
+                                          (disease, index) => (
+                                            <li key={index}>{disease}</li>
+                                          )
+                                        )}
+                                      </ul>
+                                    </div>
+
+                                    <div className="vaccine-detail-description">
+                                      <h4>أهمية اللقاح</h4>
+                                      <p>{vaccineDetails[item.id].importance}</p>
+                                    </div>
+
+                                    <div className="vaccine-detail-row">
+                                      <span>المصدر</span>
+                                      <strong>{vaccineDetails[item.id].source}</strong>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="notice-box">
+                                    <AlertCircle size={17} />
+                                    <span>
+                                      لم تتم إضافة المعلومات الطبية التفصيلية لهذا اللقاح
+                                      بعد. ستتم إضافتها بعد مراجعة المراجع الرسمية.
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </section>
+                          )}
+                        </Fragment>
+                      ))}
+                    </div>
+                  </section>
+                ))
+              ) : (
+                <div className="panel children-empty">
+                  <Search size={30} />
+                  <strong>لا توجد نتائج مطابقة للبحث</strong>
+                  <span>جرّب كتابة اسم اللقاح بطريقة أخرى أو استخدم اسمه الإنجليزي.</span>
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() => setVaccineSearch("")}
+                  >
+                    عرض جميع اللقاحات
+                  </button>
+                </div>
+              )}
 
               <div className="children-note">
                 <AlertCircle size={17} />
