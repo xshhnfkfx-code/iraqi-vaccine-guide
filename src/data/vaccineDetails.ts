@@ -89,7 +89,20 @@ const mmrDetail: VaccineDetail = {
     "مرض الحصبة الألمانية"
   ],
   importance:
-    "يساعد على حماية الطفل من الأمراض الثلاثة ومضاعفاتها، ويحفز جهاز المناعة على تكوين حماية ضدها.",
+    "يساعد على حماية الطفل من الأمراض الثلاثة ومضاعفاتها.",
+  source: "منظمة الصحة العالمية WHO"
+};
+
+const dptDetail: VaccineDetail = {
+  description:
+    "لقاح DPT أو الثلاثي البكتيري هو لقاح مركب يُستخدم للوقاية من ثلاثة أمراض معدية.",
+  protectsAgainst: [
+    "الدفتيريا (الخناق)",
+    "الكزاز (التيتانوس)",
+    "السعال الديكي"
+  ],
+  importance:
+    "تساعد الجرعات التنشيطية على تعزيز المناعة ضد الأمراض الثلاثة والمحافظة على الحماية منها.",
   source: "منظمة الصحة العالمية WHO"
 };
 
@@ -140,6 +153,8 @@ export const vaccineDetails: Record<string, VaccineDetail> = {
   "measles-single": measlesDetail,
 
   "mmr-1": mmrDetail,
-  "mmr-2": mmrDetail
-};
+  "mmr-2": mmrDetail,
 
+  "dpt-booster-1": dptDetail,
+  "dpt-booster-2": dptDetail
+};
