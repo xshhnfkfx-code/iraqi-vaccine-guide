@@ -18,6 +18,17 @@ const ipvDetail: VaccineDetail = {
   source: "منظمة الصحة العالمية WHO"
 };
 
+const opvDetail: VaccineDetail = {
+  description:
+    "لقاح شلل الأطفال الفموي OPV يُعطى على شكل قطرات عن طريق الفم.",
+  protectsAgainst: [
+    "شلل الأطفال الناتج عن أنواع الفيروس التي تستهدفها تركيبة اللقاح"
+  ],
+  importance:
+    "يساعد على تكوين مناعة ضد شلل الأطفال، ويساهم في الحد من انتشار الفيروس.",
+  source: "منظمة الصحة العالمية WHO"
+};
+
 const pentaDetail: VaccineDetail = {
   description:
     "اللقاح الخماسي هو لقاح مركب يجمع الحماية من خمسة أمراض في حقنة واحدة.",
@@ -80,23 +91,12 @@ export const vaccineDetails: Record<string, VaccineDetail> = {
     source: "منظمة الصحة العالمية WHO"
   },
 
-  "opv-0": {
-    description: "لقاح شلل الأطفال الفموي OPV يُعطى على شكل قطرات عن طريق الفم.",
-    protectsAgainst: [
-      "شلل الأطفال الناتج عن أنواع الفيروس التي تستهدفها تركيبة اللقاح"
-    ],
-    importance: "يساعد على تكوين مناعة ضد شلل الأطفال ويحد من انتقال الفيروس.",
-    source: "منظمة الصحة العالمية WHO"
-  },
-
-  "opv-1": {
-    description: "الجرعة الأولى من لقاح شلل الأطفال الفموي OPV، وتُعطى على شكل قطرات عن طريق الفم.",
-    protectsAgainst: [
-      "شلل الأطفال الناتج عن أنواع الفيروس التي تستهدفها تركيبة اللقاح"
-    ],
-    importance: "تساهم هذه الجرعة في تعزيز مناعة الطفل ضد شلل الأطفال.",
-    source: "منظمة الصحة العالمية WHO"
-  },
+  "opv-0": opvDetail,
+  "opv-1": opvDetail,
+  "opv-2": opvDetail,
+  "opv-3": opvDetail,
+  "opv-booster-1": opvDetail,
+  "opv-booster-2": opvDetail,
 
   "penta-1": pentaDetail,
   "penta-2": pentaDetail,
