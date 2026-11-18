@@ -46,6 +46,18 @@ const pcvDetail: VaccineDetail = {
   source: "منظمة الصحة العالمية WHO"
 };
 
+const rotaDetail: VaccineDetail = {
+  description:
+    "لقاح الفيروس العجلي (روتا) لقاح فموي يُعطى على شكل قطرات للوقاية من عدوى فيروس الروتا.",
+  protectsAgainst: [
+    "الإسهال الشديد الناتج عن فيروس الروتا",
+    "التهاب المعدة والأمعاء الناتج عن فيروس الروتا"
+  ],
+  importance:
+    "يساعد على تقليل خطر الإصابة الشديدة بفيروس الروتا وما قد ينتج عنها من جفاف ودخول المستشفى.",
+  source: "منظمة الصحة العالمية WHO"
+};
+
 export const vaccineDetails: Record<string, VaccineDetail> = {
   bcg: {
     description: "لقاح بي سي جي يُستخدم للوقاية من الأشكال الشديدة لمرض السل لدى الأطفال.",
@@ -94,16 +106,11 @@ export const vaccineDetails: Record<string, VaccineDetail> = {
   "pcv-2": pcvDetail,
   "pcv-3": pcvDetail,
 
-  "rota-1": {
-    description: "لقاح الفيروس العجلي (روتا) لقاح فموي يُعطى على شكل قطرات للوقاية من عدوى فيروس الروتا.",
-    protectsAgainst: [
-      "الإسهال الشديد الناتج عن فيروس الروتا",
-      "التهاب المعدة والأمعاء الناتج عن فيروس الروتا"
-    ],
-    importance: "يساعد على تقليل خطر الإصابة الشديدة بفيروس الروتا وما قد ينتج عنها من جفاف ودخول المستشفى.",
-    source: "منظمة الصحة العالمية WHO"
-  },
+  "rota-1": rotaDetail,
+  "rota-2": rotaDetail,
+  "rota-3": rotaDetail,
 
   "ipv-1": ipvDetail,
   "ipv-2": ipvDetail
 };
+
