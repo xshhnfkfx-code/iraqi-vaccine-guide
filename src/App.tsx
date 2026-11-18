@@ -9,6 +9,7 @@ import { navigation } from "./data/navigation";
 import type { SectionId } from "./types";
 import { getAllLocalRecords } from "./lib/db";
 import { vaccineSchedule } from "./data/vaccineSchedule";
+import { vaccineDetails } from "./data/vaccineDetails";
 
 const metrics = [
   { label: "اللقاحات في الدليل", value: "—", note: "جدول التلقيح الوطني", icon: Syringe },
@@ -321,7 +322,7 @@ function App() {
                             <div className="panel-heading">
                               <div>
                                 <h2>تفاصيل الجرعة</h2>
-                                <p>المعلومات المسجلة في جدول اللقاحات</p>
+                                <p>المعلومات المسجلة في دليل اللقاحات</p>
                               </div>
 
                               <button
@@ -358,13 +359,43 @@ function App() {
                                 </div>
                               )}
 
-                              <div className="notice-box">
-                                <AlertCircle size={17} />
-                                <span>
-                                  ستُضاف المعلومات الطبية التفصيلية عن الأمراض التي يقي منها اللقاح
-                                  وطريقة الإعطاء وموضع الحقن والتحذيرات بعد مراجعتها من المراجع الرسمية.
-                                </span>
-                              </div>
+                              {vaccineDetails[item.id] ? (
+                                <>
+                                  <div className="vaccine-detail-description">
+                                    <h4>ما هو هذا اللقاح؟</h4>
+                                    <p>{vaccineDetails[item.id].description}</p>
+                                  </div>
+
+                                  <div className="vaccine-detail-description">
+                                    <h4>الأمراض التي يقي منها</h4>
+                                    <ul>
+                                      {vaccineDetails[item.id].protectsAgainst.map(
+                                        (disease, index) => (
+                                          <li key={index}>{disease}</li>
+                                        )
+                                      )}
+                                    </ul>
+                                  </div>
+
+                                  <div className="vaccine-detail-description">
+                                    <h4>أهمية اللقاح</h4>
+                                    <p>{vaccineDetails[item.id].importance}</p>
+                                  </div>
+
+                                  <div className="vaccine-detail-row">
+                                    <span>المصدر</span>
+                                    <strong>{vaccineDetails[item.id].source}</strong>
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="notice-box">
+                                  <AlertCircle size={17} />
+                                  <span>
+                                    لم تتم إضافة المعلومات الطبية التفصيلية لهذا اللقاح
+                                    بعد. ستتم إضافتها بعد مراجعة المراجع الرسمية.
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           </section>
                         )}
