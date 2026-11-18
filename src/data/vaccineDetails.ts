@@ -69,6 +69,17 @@ const rotaDetail: VaccineDetail = {
   source: "منظمة الصحة العالمية WHO"
 };
 
+const measlesDetail: VaccineDetail = {
+  description:
+    "لقاح الحصبة المفرد لقاح يحتوي على فيروس حصبة حي مُضعّف، ويُستخدم لتحفيز جهاز المناعة على تكوين حماية ضد المرض.",
+  protectsAgainst: [
+    "مرض الحصبة"
+  ],
+  importance:
+    "يساعد على الوقاية من الحصبة ومضاعفاتها الخطيرة، مثل الالتهاب الرئوي والتهاب الدماغ.",
+  source: "منظمة الصحة العالمية WHO"
+};
+
 export const vaccineDetails: Record<string, VaccineDetail> = {
   bcg: {
     description: "لقاح بي سي جي يُستخدم للوقاية من الأشكال الشديدة لمرض السل لدى الأطفال.",
@@ -111,6 +122,7 @@ export const vaccineDetails: Record<string, VaccineDetail> = {
   "rota-3": rotaDetail,
 
   "ipv-1": ipvDetail,
-  "ipv-2": ipvDetail
-};
+  "ipv-2": ipvDetail,
 
+  "measles-single": measlesDetail
+};
