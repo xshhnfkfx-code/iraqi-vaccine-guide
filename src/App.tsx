@@ -11,6 +11,7 @@ import { getAllLocalRecords } from "./lib/db";
 import { vaccineSchedule } from "./data/vaccineSchedule";
 import { vaccineDetails } from "./data/vaccineDetails";
 import ColdChain from "./ColdChain";
+import Microplan from "./Microplan";
 
 const metrics = [
   { label: "اللقاحات في الدليل", value: "—", note: "جدول التلقيح الوطني", icon: Syringe },
@@ -573,6 +574,8 @@ function App() {
             </section>
           ) : active === "cold-chain" ? (
             <ColdChain />
+          ) : active === "microplan" ? (
+            <Microplan />
           ) : active === "dashboard" ? (
             <>
               <section className="metrics-grid">
