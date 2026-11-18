@@ -3,7 +3,7 @@ import {
   Search, Pill, Wifi, WifiOff, AlertTriangle, ShieldCheck,
   HeartPulse, X, ChevronLeft, Activity, Stethoscope,
   BookOpen, RotateCcw, Database, Camera, ImagePlus,
-  ScanSearch, Loader2
+  ScanSearch, Loader2, FlaskConical, Package, Info
 } from "lucide-react";
 
 import { medicines } from "./data/medicineDatabase";
@@ -62,6 +62,9 @@ export default function App() {
         medicine.name,
         medicine.english,
         medicine.category,
+        medicine.activeIngredient,
+        ...medicine.forms,
+        ...medicine.strengths,
         ...medicine.uses,
         ...medicine.warnings
       ].join(" ");
@@ -80,6 +83,9 @@ export default function App() {
     setScanText("");
     setScanMatches([]);
     setScanError("");
+
+    if (cameraRef.current) cameraRef.current.value = "";
+    if (galleryRef.current) galleryRef.current.value = "";
   }
 
   function handleImage(file?: File) {
@@ -97,12 +103,15 @@ export default function App() {
     setSelected(null);
 
     const reader = new FileReader();
+
     reader.onload = () => {
       setImagePreview(String(reader.result || ""));
     };
+
     reader.onerror = () => {
       setScanError("تعذر فتح الصورة. حاول اختيار صورة أخرى.");
     };
+
     reader.readAsDataURL(file);
   }
 
@@ -114,10 +123,12 @@ export default function App() {
     return medicines.filter((medicine) => {
       const name = normalize(medicine.name);
       const english = normalize(medicine.english);
+      const ingredient = normalize(medicine.activeIngredient);
 
       return (
         (name.length > 2 && normalizedText.includes(name)) ||
-        (english.length > 2 && normalizedText.includes(english))
+        (english.length > 2 && normalizedText.includes(english)) ||
+        (ingredient.length > 2 && normalizedText.includes(ingredient))
       );
     });
   }
@@ -126,11 +137,6 @@ export default function App() {
     if (!imageFile) {
       setScanError("التقط صورة أو اختر صورة من المعرض أولاً.");
       return;
-    }
-
-    if (!online && !navigator.onLine) {
-      // يمكن استخدام ملفات اللغة المخزنة مؤقتاً بعد تحميلها سابقاً.
-      // إذا لم تكن الملفات مخزنة، سيظهر خطأ من محرك القراءة.
     }
 
     setScanning(true);
@@ -166,6 +172,7 @@ export default function App() {
       }
     } catch (error) {
       console.error(error);
+
       setScanError(
         online
           ? "حدث خطأ أثناء قراءة الصورة. تحقق من الاتصال بالإنترنت وحاول مجدداً."
@@ -175,8 +182,14 @@ export default function App() {
       if (worker) {
         await worker.terminate();
       }
+
       setScanning(false);
     }
+  }
+
+  function openMedicine(medicine: Medicine) {
+    setSelected(medicine);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   return (
@@ -191,7 +204,6 @@ export default function App() {
         }
 
         button, input { font: inherit; }
-
         button { cursor: pointer; }
 
         .medicine-app {
@@ -470,6 +482,31 @@ export default function App() {
           color: #4f6177;
           line-height: 2;
           font-size: 14px;
+        }
+
+        .med-detail-text {
+          margin: 0;
+          color: #4f6177;
+          line-height: 1.9;
+          font-size: 14px;
+        }
+
+        .med-info-list {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        .med-info-chip {
+          display: inline-block;
+          background: #edf6fc;
+          color: #285c7c;
+          border: 1px solid #dcecf7;
+          border-radius: 9px;
+          padding: 8px 11px;
+          font-size: 13px;
+          line-height: 1.6;
+          overflow-wrap: anywhere;
         }
 
         .med-warning {
@@ -761,7 +798,7 @@ export default function App() {
 
                   <button
                     className="med-open"
-                    onClick={() => setSelected(medicine)}
+                    onClick={() => openMedicine(medicine)}
                   >
                     <span>التفاصيل</span>
                     <ChevronLeft size={16} />
@@ -781,10 +818,10 @@ export default function App() {
           <h2>البحث عن دواء</h2>
 
           <p className="med-subtitle">
-            اكتب الاسم التجاري أو العلمي بالعربية أو الإنجليزية.
+            اكتب الاسم التجاري أو العلمي أو المادة الفعالة أو الشكل الدوائي.
           </p>
 
-          <label className="med-label">اسم العلاج</label>
+          <label className="med-label">اسم العلاج أو المادة الفعالة</label>
 
           <div className="med-input-wrap">
             <Search size={20} />
@@ -885,6 +922,44 @@ export default function App() {
 
             <div className="med-detail-section">
               <h3>
+                <FlaskConical size={18} />
+                المادة الفعالة
+              </h3>
+              <p className="med-detail-text">
+                {selected.activeIngredient}
+              </p>
+            </div>
+
+            <div className="med-detail-section">
+              <h3>
+                <Package size={18} />
+                الأشكال الدوائية
+              </h3>
+              <div className="med-info-list">
+                {selected.forms.map((item, i) => (
+                  <span className="med-info-chip" key={i}>
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="med-detail-section">
+              <h3>
+                <Pill size={18} />
+                التركيزات الشائعة
+              </h3>
+              <div className="med-info-list">
+                {selected.strengths.map((item, i) => (
+                  <span className="med-info-chip" key={i}>
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="med-detail-section">
+              <h3>
                 <Stethoscope size={18} />
                 الاستخدامات الطبية
               </h3>
@@ -909,22 +984,29 @@ export default function App() {
 
             <div className="med-detail-section">
               <h3>
+                <Info size={18} />
+                ملاحظات الاستعمال
+              </h3>
+              <p className="med-detail-text">
+                {selected.usageNotes}
+              </p>
+            </div>
+
+            <div className="med-detail-section">
+              <h3>
                 <Activity size={18} />
                 معلومات العمر
               </h3>
 
-              <p style={{
-                fontSize: 14,
-                lineHeight: 1.9,
-                color: "#52647a"
-              }}>
+              <p className="med-detail-text">
                 {selected.ageInfo}
               </p>
 
               {age !== "" && (
                 <p style={{
                   fontSize: 13,
-                  color: "#52647a"
+                  color: "#52647a",
+                  marginTop: 10
                 }}>
                   العمر المدخل: {age} سنة
                   {weight ? ` · الوزن: ${weight} كغم` : ""}
@@ -935,10 +1017,11 @@ export default function App() {
             <div className="med-warning">
               <AlertTriangle size={20} />
               <span>
-                لا يمكن تحديد جرعة آمنة من الاسم والعمر وحدهما.
-                يجب مراعاة الوزن والتركيز والشكل الدوائي والتشخيص
-                والحالة الصحية. لا تستخدم هذه المعلومات بديلاً عن
-                وصف الطبيب أو الصيدلي.
+                التركيزات المعروضة أمثلة شائعة وليست قائمة كاملة.
+                يجب التحقق من المادة الفعالة والتركيز والشكل الدوائي
+                على العبوة والنشرة. لا يمكن تحديد جرعة آمنة من هذه
+                المعلومات وحدها؛ ويجب مراعاة العمر والوزن والتشخيص
+                والحالة الصحية وتوجيه الطبيب أو الصيدلي.
               </span>
             </div>
           </section>
@@ -967,7 +1050,7 @@ export default function App() {
 
                   <button
                     className="med-open"
-                    onClick={() => setSelected(medicine)}
+                    onClick={() => openMedicine(medicine)}
                   >
                     <span>التفاصيل</span>
                     <ChevronLeft size={16} />
