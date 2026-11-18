@@ -106,6 +106,32 @@ const dptDetail: VaccineDetail = {
   source: "منظمة الصحة العالمية WHO"
 };
 
+const vitaminA100Detail: VaccineDetail = {
+  description:
+    "مكمل فيتامين A بتركيز 100,000 وحدة دولية، يُعطى عادةً عن طريق الفم.",
+  protectsAgainst: [
+    "نقص فيتامين A",
+    "العمى الليلي المرتبط بنقص فيتامين A",
+    "مضاعفات نقص فيتامين A على صحة العين"
+  ],
+  importance:
+    "يساعد على الوقاية من نقص فيتامين A ومضاعفاته لدى الأطفال ضمن الفئات العمرية والبرامج الصحية المستهدفة.",
+  source: "منظمة الصحة العالمية WHO"
+};
+
+const vitaminA200Detail: VaccineDetail = {
+  description:
+    "مكمل فيتامين A بتركيز 200,000 وحدة دولية، يُعطى عادةً عن طريق الفم.",
+  protectsAgainst: [
+    "نقص فيتامين A",
+    "العمى الليلي المرتبط بنقص فيتامين A",
+    "مضاعفات نقص فيتامين A على صحة العين"
+  ],
+  importance:
+    "يساعد على الوقاية من نقص فيتامين A ومضاعفاته. يجب الالتزام بالعمر والموعد المحددين في البرنامج الصحي المعتمد، وعدم تكرار الجرعة من تلقاء النفس.",
+  source: "منظمة الصحة العالمية WHO"
+};
+
 export const vaccineDetails: Record<string, VaccineDetail> = {
   bcg: {
     description: "لقاح بي سي جي يُستخدم للوقاية من الأشكال الشديدة لمرض السل لدى الأطفال.",
@@ -156,5 +182,9 @@ export const vaccineDetails: Record<string, VaccineDetail> = {
   "mmr-2": mmrDetail,
 
   "dpt-booster-1": dptDetail,
-  "dpt-booster-2": dptDetail
+  "dpt-booster-2": dptDetail,
+
+  "vit-a-100000": vitaminA100Detail,
+  "vit-a-200000-18": vitaminA200Detail,
+  "vit-a-200000-4-6": vitaminA200Detail
 };
