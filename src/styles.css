@@ -396,3 +396,234 @@ h1 { margin: 5px 0 4px; color: #18343d; font-size: 22px; font-weight: 800; }
   }
 }
 
+/* ================================
+   Cold Chain - سلسلة التبريد
+================================ */
+
+.cold-chain-module {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  direction: rtl;
+  width: 100%;
+}
+
+.cold-chain-intro {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 22px;
+  background: linear-gradient(135deg, #eaf6ff, #f3fbff);
+  border: 1px solid #d9eaf7;
+  border-radius: 16px;
+}
+
+.cold-chain-intro h2 {
+  margin: 0 0 7px;
+  color: #17476a;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.cold-chain-intro p {
+  margin: 0;
+  color: #647b8d;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.cold-chain-icon {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1684bd;
+  background: #e3f3ff;
+  border-radius: 14px;
+}
+
+.cold-chain-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.cold-chain-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  color: #34485a;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.cold-chain-fields input,
+.cold-chain-fields select {
+  width: 100%;
+  min-height: 45px;
+  padding: 10px 13px;
+  border: 1px solid #dce5ed;
+  border-radius: 10px;
+  background: #fff;
+  color: #26394a;
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.cold-chain-fields input:focus,
+.cold-chain-fields select:focus {
+  border-color: #2696c9;
+  box-shadow: 0 0 0 3px rgba(38, 150, 201, 0.12);
+}
+
+.cold-chain-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.cold-chain-card {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 15px;
+  background: #fbfdff;
+  border: 1px solid #e6edf3;
+  border-radius: 13px;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.cold-chain-card:hover {
+  background: #f4faff;
+  border-color: #cfe5f3;
+}
+
+.cold-chain-card-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.cold-chain-card-info strong {
+  color: #263f52;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.cold-chain-card-info span {
+  color: #64798a;
+  font-size: 13px;
+}
+
+.cold-chain-card-info small {
+  color: #8797a5;
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.temperature-status {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+}
+
+.temperature-status.normal {
+  color: #16865a;
+  background: #e5f7ee;
+}
+
+.temperature-status.warning {
+  color: #c47b13;
+  background: #fff3dc;
+}
+
+.temperature-warning-text {
+  color: #b66b0b !important;
+  font-weight: 700;
+  line-height: 1.8;
+}
+
+.cold-chain-card .icon-button {
+  flex-shrink: 0;
+}
+
+.cold-chain-module .panel {
+  border-radius: 15px;
+}
+
+.cold-chain-module .panel-heading {
+  align-items: center;
+}
+
+.cold-chain-module .panel-heading h2 {
+  font-size: 17px;
+}
+
+.cold-chain-module .panel-heading p {
+  line-height: 1.8;
+}
+
+.cold-chain-module .form-actions {
+  margin-top: 16px;
+}
+
+.cold-chain-module .primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 43px;
+  border-radius: 10px;
+}
+
+.cold-chain-module .notice-box {
+  margin-top: 15px;
+  line-height: 1.8;
+}
+
+@media (max-width: 600px) {
+  .cold-chain-fields {
+    grid-template-columns: 1fr;
+    gap: 13px;
+  }
+
+  .cold-chain-intro {
+    padding: 16px;
+  }
+
+  .cold-chain-intro h2 {
+    font-size: 17px;
+  }
+
+  .cold-chain-card {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .cold-chain-card-info strong {
+    font-size: 13px;
+  }
+
+  .cold-chain-card-info span {
+    font-size: 12px;
+  }
+
+  .temperature-status {
+    width: 37px;
+    height: 37px;
+    min-width: 37px;
+  }
+}
+
