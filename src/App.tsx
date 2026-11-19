@@ -452,35 +452,8 @@ export default function App() {
     setShowAddForm(false);
   }
 
-    function renderMedicineList(items: Medicine[]) {
-    return items.map((medicine) => (
-      <article className="med-result" key={medicine.id}>
-        <div className="med-pill-icon">
-          <Pill size={21} />
-        </div>
 
-        <div className="med-result-info">
-          <strong>{medicine.name}</strong>
-          <small dir="ltr">{medicine.english}</small>
-          <small>{medicine.activeIngredient}</small>
-        </div>
-
-        <button
-          className="med-open"
-          onClick={() => openMedicine(medicine)}
-        >
-          <span>التفاصيل</span>
-          <ChevronLeft size={16} />
-        </button>
-      </article>
-    ));
-    }
-
-        
-
-
-            
-  function renderGlobalList(items: GlobalMedicineResult[]) {
+function renderGlobalList(items: GlobalMedicineResult[]) {
   return items.map((medicine) => (
     <article className="med-result" key={medicine.rxcui}>
       <div className="med-pill-icon global-icon">
@@ -498,9 +471,20 @@ export default function App() {
           {medicine.synonym || "لا يوجد اسم بديل مسجل"}
         </small>
 
-        {medicine.arabicUses && medicine.arabicUses.length > 0 && (
+        {medicine.arabicUses && medicine.arabicUses.length > 0 ? (
+          <div className="global-uses-preview">
+            <strong>الاستخدامات العلاجية:</strong>
+            <ul>
+              {medicine.arabicUses.map((use, index) => (
+                <li key={`${medicine.rxcui}-use-${index}`}>
+                  {use}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : (
           <small>
-            **الاستخدامات الطبية:** {medicine.arabicUses.join("، ")}
+            لا تتوفر استخدامات عربية لهذه النتيجة حالياً.
           </small>
         )}
 
@@ -518,39 +502,8 @@ export default function App() {
       </button>
     </article>
   ));
-  }
-    return items.map((medicine) => (
-      <article className="med-result" key={medicine.rxcui}>
-        <div className="med-pill-icon global-icon">
-          <Globe size={21} />
-        </div>
-
-        <div className="med-result-info">
-          <strong>{medicine.arabicName || medicine.name}</strong>
-
-          {medicine.arabicName && (
-            <small dir="ltr">{medicine.name}</small>
-          )}
-
-          <small>
-            {medicine.synonym || "لا يوجد اسم بديل مسجل"}
-          </small>
-
-          <small className="source-global">
-            نتيجة عالمية · {medicine.type || "RxNorm"}
-          </small>
-        </div>
-
-        <button
-          className="med-open"
-          onClick={() => openGlobalMedicine(medicine)}
-        >
-          <span>التفاصيل</span>
-          <ChevronLeft size={16} />
-        </button>
-      </article>
-    ));
-  }
+}
+ 
 
   function renderExtraList(
     title: string,
