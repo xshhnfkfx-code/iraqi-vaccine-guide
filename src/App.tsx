@@ -805,6 +805,7 @@ function renderGlobalList(items: GlobalMedicineResult[]) {
           overflow-wrap: anywhere;
         }
 
+ 
   .med-result-info small {
   color: #7b899b;
   display: block;
