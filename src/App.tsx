@@ -805,7 +805,44 @@ function renderGlobalList(items: GlobalMedicineResult[]) {
           overflow-wrap: anywhere;
         }
 
-        .med-result-info small {
+  .med-result-info small {
+  color: #7b899b;
+  display: block;
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+}
+
+/* تنسيق الاستخدامات العلاجية باللغة العربية */
+.global-uses-preview {
+  margin-top: 9px;
+  padding: 9px 10px;
+  background: #f0f8fd;
+  border-right: 3px solid #0878b4;
+  border-radius: 8px;
+  color: #38566f;
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.global-uses-preview strong {
+  display: block;
+  font-size: 12px;
+  color: #0878b4;
+  margin-bottom: 4px;
+}
+
+.global-uses-preview ul {
+  margin: 0;
+  padding-right: 18px;
+}
+
+.global-uses-preview li {
+  margin: 2px 0;
+}
+
+.source-local { color: #278052 !important; }
+.source-global { color: #0878b4 !important; }
+
           color: #7b899b;
           display: block;
           margin-top: 5px;
