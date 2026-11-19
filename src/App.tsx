@@ -337,14 +337,12 @@ export default function App() {
     setSelected(medicine);
     setSelectedGlobal(null);
     setShowAddForm(false);
-    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function openGlobalMedicine(medicine: GlobalMedicineResult) {
     setSelectedGlobal(medicine);
     setSelected(null);
     setShowAddForm(false);
-    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function updateForm(field: keyof typeof emptyForm, value: string) {
@@ -452,7 +450,6 @@ export default function App() {
     setSelected(newMedicine);
     setSelectedGlobal(null);
     setShowAddForm(false);
-    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function renderMedicineList(items: Medicine[]) {
@@ -489,10 +486,16 @@ export default function App() {
         </div>
 
         <div className="med-result-info">
-          <strong>{medicine.name}</strong>
+          <strong>{medicine.arabicName || medicine.name}</strong>
+
+          {medicine.arabicName && (
+            <small dir="ltr">{medicine.name}</small>
+          )}
+
           <small>
             {medicine.synonym || "لا يوجد اسم بديل مسجل"}
           </small>
+
           <small className="source-global">
             نتيجة عالمية · {medicine.type || "RxNorm"}
           </small>
@@ -1369,7 +1372,6 @@ export default function App() {
               setSelectedGlobal(null);
               setFormError("");
               setFormSuccess("");
-              window.scrollTo({ top: 0, behavior: "smooth" });
             }}
           >
             {showAddForm ? <X size={19} /> : <PlusCircle size={19} />}
@@ -1618,7 +1620,14 @@ export default function App() {
               </div>
 
               <div style={{ flex: 1, minWidth: 0 }}>
-                <h2>{selectedGlobal.name}</h2>
+                <h2>
+                  {selectedGlobal.arabicName || selectedGlobal.name}
+                </h2>
+
+                {selectedGlobal.arabicName && (
+                  <p dir="ltr">{selectedGlobal.name}</p>
+                )}
+
                 <p>نتيجة من قاعدة RxNorm العالمية</p>
               </div>
 
@@ -1634,6 +1643,13 @@ export default function App() {
             <div className="med-detail-section">
               <h3><Database size={18} /> رقم التعريف العالمي</h3>
               <p className="med-detail-text" dir="ltr">{selectedGlobal.rxcui}</p>
+            </div>
+
+            <div className="med-detail-section">
+              <h3><Info size={18} /> الاسم الإنجليزي الأصلي</h3>
+              <p className="med-detail-text" dir="ltr">
+                {selectedGlobal.name}
+              </p>
             </div>
 
             <div className="med-detail-section">
@@ -1744,175 +1760,4 @@ export default function App() {
             {renderExtraList(
               "الآثار الجانبية",
               selected.sideEffects,
-              <AlertTriangle size={18} />
-            )}
-
-            {renderExtraList(
-              "موانع الاستعمال",
-              selected.contraindications,
-              <Info size={18} />
-            )}
-
-            {renderExtraList(
-              "التداخلات الدوائية",
-              selected.interactions,
-              <Activity size={18} />
-            )}
-
-            {renderExtraList(
-              "الاحتياطات الإضافية",
-              selected.precautions,
-              <Info size={18} />
-            )}
-
-            <div className="med-detail-section">
-              <h3><Info size={18} /> ملاحظات الاستعمال</h3>
-              <p className="med-detail-text">{selected.usageNotes}</p>
-            </div>
-
-            <div className="med-detail-section">
-              <h3><Activity size={18} /> معلومات العمر</h3>
-              <p className="med-detail-text">{selected.ageInfo}</p>
-
-              {age !== "" && (
-                <p style={{ fontSize: 13, color: "#52647a", marginTop: 10 }}>
-                  العمر المدخل: {age} سنة
-                  {weight ? ` · الوزن: ${weight} كغم` : ""}
-                </p>
-              )}
-            </div>
-
-            {renderExtraText(
-              "معلومات الحمل",
-              selected.pregnancyInfo,
-              <HeartPulse size={18} />
-            )}
-
-            {renderExtraText(
-              "معلومات الرضاعة الطبيعية",
-              selected.breastfeedingInfo,
-              <HeartPulse size={18} />
-            )}
-
-            {renderExtraText(
-              "ظروف التخزين",
-              selected.storageInfo,
-              <Package size={18} />
-            )}
-
-            {renderExtraText(
-              "معلومات الجرعة الزائدة",
-              selected.overdoseInfo,
-              <AlertTriangle size={18} />
-            )}
-
-            {renderExtraList(
-              "المراجع الطبية",
-              selected.medicalReferences,
-              <BookOpen size={18} />
-            )}
-
-            <div className="med-warning">
-              <AlertTriangle size={20} />
-              <span>
-                المعلومات المعروضة تثقيفية وقد لا تشمل جميع التفاصيل الخاصة
-                بكل منتج أو شركة مصنّعة. الأسماء التجارية والتركيزات قد تختلف
-                حسب البلد. يجب الرجوع إلى النشرة الرسمية للمنتج والتحقق من
-                المادة الفعالة والتركيز والشكل الدوائي. لا يمكن تحديد جرعة
-                آمنة من هذه المعلومات وحدها؛ ويجب مراعاة العمر والوزن
-                والتشخيص والحالة الصحية وتوجيه الطبيب أو الصيدلي.
-              </span>
-            </div>
-          </section>
-        ) : search.trim() && !showAddForm ? (
-          <>
-            <section className="med-panel">
-              <div className="med-result-title">
-                <h2>نتائج البحث المحلي</h2>
-                <span className="med-count">{results.length} نتيجة</span>
-              </div>
-
-              {results.length > 0 ? (
-                renderMedicineList(results)
-              ) : (
-                <div className="med-empty">
-                  <Search size={30} />
-                  <p>لم نعثر على الدواء في قاعدة البيانات المحلية.</p>
-                  <small>
-                    يمكنك استخدام البحث العالمي أو إضافة الدواء بعد التحقق من معلوماته.
-                  </small>
-                </div>
-              )}
-            </section>
-
-            {globalSearched && (
-              <section className="med-panel">
-                <div className="med-result-title">
-                  <h2>
-                    <Globe size={19} style={{ verticalAlign: "middle", marginLeft: 6 }} />
-                    نتائج البحث العالمي
-                  </h2>
-                  <span className="med-count">{globalResults.length} نتيجة</span>
-                </div>
-
-                {globalLoading && (
-                  <div className="med-loading">
-                    <Loader2 size={20} />
-                    جارٍ جلب النتائج العالمية...
-                  </div>
-                )}
-
-                {globalError && (
-                  <div className="med-status error">
-                    <AlertTriangle size={17} />
-                    {globalError}
-                  </div>
-                )}
-
-                {globalResults.length > 0 &&
-                  renderGlobalList(globalResults)}
-              </section>
-            )}
-          </>
-        ) : globalSearched && !showAddForm ? (
-          <section className="med-panel">
-            <div className="med-result-title">
-              <h2>نتائج البحث العالمي</h2>
-              <span className="med-count">{globalResults.length} نتيجة</span>
-            </div>
-
-            {globalLoading && (
-              <div className="med-loading">
-                <Loader2 size={20} />
-                جارٍ جلب النتائج العالمية...
-              </div>
-            )}
-
-            {globalError && (
-              <div className="med-status error">{globalError}</div>
-            )}
-
-            {globalResults.length > 0 &&
-              renderGlobalList(globalResults)}
-          </section>
-        ) : !showAddForm ? (
-          <section className="med-panel">
-            <div className="med-empty">
-              <BookOpen size={32} />
-              <p>مرحباً بك في الموسوعة الدوائية العالمية.</p>
-              <small>
-                اكتب اسم الدواء في مربع البحث لعرض المعلومات والنتائج المتاحة.
-              </small>
-            </div>
-          </section>
-        ) : null}
-
-        <footer className="med-footer">
-          الموسوعة الدوائية العالمية – World Drug Encyclopedia
-          <br />
-          المعلومات تثقيفية ولا تغني عن النشرة الرسمية أو استشارة الطبيب والصيدلي.
-        </footer>
-      </main>
-    </div>
-  );
-}
+              <Ale
