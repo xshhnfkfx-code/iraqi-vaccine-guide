@@ -2,6 +2,7 @@ export type GlobalMedicineResult = {
   rxcui: string;
   name: string;
   arabicName?: string;
+  arabicUses?: string[];
   synonym: string;
   type: string;
   source: string;
@@ -33,7 +34,7 @@ type CachedSearch = {
   savedAt: string;
 };
 
-// أسماء عربية معروفة لبعض المواد الدوائية الشائعة
+// الأسماء العربية للمواد الدوائية الشائعة
 const arabicMedicineNames: Record<string, string> = {
   paracetamol: "باراسيتامول",
   acetaminophen: "باراسيتامول",
@@ -82,26 +83,154 @@ const arabicMedicineNames: Record<string, string> = {
   vitamin: "فيتامين",
 };
 
-function getArabicMedicineName(name: string): string | undefined {
-  const normalized = name.toLowerCase();
+// استخدامات طبية عامة لبعض المواد الفعالة المعروفة
+// هذه المعلومات تثقيفية وليست توصية علاجية
+const arabicMedicineUses: Record<string, string[]> = {
+  paracetamol: [
+    "تخفيف الألم الخفيف إلى المتوسط",
+    "خفض ارتفاع درجة الحرارة",
+  ],
+  acetaminophen: [
+    "تخفيف الألم الخفيف إلى المتوسط",
+    "خفض ارتفاع درجة الحرارة",
+  ],
+  ibuprofen: [
+    "تخفيف الألم",
+    "تقليل الالتهاب والتورم",
+    "خفض ارتفاع درجة الحرارة",
+  ],
+  amoxicillin: [
+    "علاج بعض الالتهابات البكتيرية الحساسة للمضاد الحيوي",
+  ],
+  azithromycin: [
+    "علاج بعض الالتهابات البكتيرية الحساسة للمضاد الحيوي",
+  ],
+  metronidazole: [
+    "علاج بعض الالتهابات الناتجة عن البكتيريا اللاهوائية",
+    "علاج بعض العدوى الطفيلية",
+  ],
+  cetirizine: [
+    "تخفيف أعراض الحساسية",
+    "تخفيف العطاس وسيلان الأنف والحكة",
+  ],
+  loratadine: [
+    "تخفيف أعراض الحساسية",
+    "تخفيف العطاس وسيلان الأنف وحكة العين",
+  ],
+  omeprazole: [
+    "تقليل إفراز حمض المعدة",
+    "علاج بعض حالات الارتجاع المعدي المريئي",
+    "المساعدة في علاج بعض حالات قرحة المعدة",
+  ],
+  metformin: [
+    "المساعدة في ضبط مستوى سكر الدم لدى المصابين بالسكري من النوع الثاني",
+  ],
+  amlodipine: [
+    "علاج ارتفاع ضغط الدم",
+    "علاج بعض حالات الذبحة الصدرية",
+  ],
+  atorvastatin: [
+    "خفض مستويات الكوليسترول والدهون في الدم",
+    "تقليل خطر بعض أمراض القلب والأوعية الدموية",
+  ],
+  aspirin: [
+    "تخفيف الألم وخفض الحرارة في بعض الاستخدامات",
+    "يُستخدم بجرعات محددة لمنع تجمع الصفائح الدموية لدى بعض المرضى",
+  ],
+  diclofenac: [
+    "تخفيف الألم والالتهاب",
+    "تخفيف بعض آلام المفاصل والعضلات",
+  ],
+  salbutamol: [
+    "توسيع الشعب الهوائية",
+    "تخفيف الأزيز وضيق التنفس الناتج عن تضيق الشعب الهوائية",
+  ],
+  albuterol: [
+    "توسيع الشعب الهوائية",
+    "تخفيف الأزيز وضيق التنفس الناتج عن تضيق الشعب الهوائية",
+  ],
+  prednisolone: [
+    "تقليل الالتهاب",
+    "علاج بعض الحالات المرتبطة بزيادة نشاط الجهاز المناعي",
+  ],
+  prednisone: [
+    "تقليل الالتهاب",
+    "علاج بعض الحالات المرتبطة بزيادة نشاط الجهاز المناعي",
+  ],
+  domperidone: [
+    "تخفيف الغثيان والقيء في بعض الحالات",
+  ],
+  metoclopramide: [
+    "تخفيف الغثيان والقيء",
+    "المساعدة في بعض حالات بطء إفراغ المعدة",
+  ],
+};
 
-  for (const [english, arabic] of Object.entries(arabicMedicineNames)) {
-    const pattern = new RegExp(`\\b${english}\\b`, "i");
+// البحث عن اسم المادة الفعالة داخل اسم الدواء
+function findMedicineKeys(name: string): string[] {
+  const normalized = name.toLowerCase();
+  const matches: string[] = [];
+
+  for (const key of Object.keys(arabicMedicineNames)) {
+    const pattern = new RegExp(`\\b${key}\\b`, "i");
 
     if (pattern.test(normalized)) {
-      return arabic;
+      matches.push(key);
     }
   }
 
-  return undefined;
+  return matches;
+}
+
+function getArabicMedicineName(name: string): string | undefined {
+  const keys = findMedicineKeys(name);
+
+  return keys.length > 0
+    ? arabicMedicineNames[keys[0]]
+    : undefined;
+}
+
+function getArabicMedicineUses(name: string): string[] | undefined {
+  const keys = findMedicineKeys(name);
+  const uses: string[] = [];
+
+  for (const key of keys) {
+    const medicineUses = arabicMedicineUses[key];
+
+    if (medicineUses) {
+      for (const use of medicineUses) {
+        if (!uses.includes(use)) {
+          uses.push(use);
+        }
+      }
+    }
+  }
+
+  return uses.length > 0 ? uses : undefined;
+}
+
+function enrichMedicine(
+  medicine: GlobalMedicineResult
+): GlobalMedicineResult {
+  return {
+    ...medicine,
+    arabicName:
+      medicine.arabicName ||
+      getArabicMedicineName(medicine.name),
+    arabicUses:
+      medicine.arabicUses ||
+      getArabicMedicineUses(medicine.name),
+  };
 }
 
 function loadCache(): CachedSearch[] {
   try {
     const saved = localStorage.getItem(CACHE_KEY);
+
     if (!saved) return [];
 
     const parsed: unknown = JSON.parse(saved);
+
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
@@ -128,11 +257,7 @@ export function getCachedGlobalMedicineSearch(
     (item) => item.query === normalized
   );
 
-  return (cached?.results ?? []).map((medicine) => ({
-    ...medicine,
-    arabicName:
-      medicine.arabicName || getArabicMedicineName(medicine.name),
-  }));
+  return (cached?.results ?? []).map(enrichMedicine);
 }
 
 export async function searchGlobalMedicines(
@@ -166,15 +291,16 @@ export async function searchGlobalMedicines(
 
         seen.add(concept.rxcui);
 
-        results.push({
-          rxcui: concept.rxcui,
-          name: concept.name,
-          arabicName: getArabicMedicineName(concept.name),
-          synonym: concept.synonym ?? "",
-          type: concept.tty ?? group.tty ?? "",
-          source: "RxNorm - U.S. National Library of Medicine",
-          fetchedAt,
-        });
+        results.push(
+          enrichMedicine({
+            rxcui: concept.rxcui,
+            name: concept.name,
+            synonym: concept.synonym ?? "",
+            type: concept.tty ?? group.tty ?? "",
+            source: "RxNorm - U.S. National Library of Medicine",
+            fetchedAt,
+          })
+        );
       }
     }
 
