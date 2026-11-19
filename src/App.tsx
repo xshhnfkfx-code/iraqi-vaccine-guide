@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Search, Pill, Wifi, WifiOff, AlertTriangle, ShieldCheck,
-  HeartPulse, X, ChevronLeft, Activity, Stethoscope,
-  BookOpen, RotateCcw, Database, Camera, ImagePlus,
-  ScanSearch, Loader2, FlaskConical, Package, Info,
-  PlusCircle, Save, Globe, RefreshCw
+  Search, Pill, Wifi, WifiOff, AlertTriangle, HeartPulse,
+  X, ChevronLeft, Activity, Stethoscope, RotateCcw,
+  Database, Camera, ImagePlus, ScanSearch, Loader2,
+  FlaskConical, Package, Info, PlusCircle, Save, Globe,
+  RefreshCw, BookOpen
 } from "lucide-react";
 
 import { medicines } from "./data/medicineDatabase";
@@ -39,6 +39,7 @@ export default function App() {
   const [search, setSearch] = useState("");
   const [age, setAge] = useState("");
   const [weight, setWeight] = useState("");
+
   const [selected, setSelected] = useState<Medicine | null>(null);
   const [selectedGlobal, setSelectedGlobal] =
     useState<GlobalMedicineResult | null>(null);
@@ -155,23 +156,15 @@ export default function App() {
     setGlobalSearched(true);
 
     const cached = getCachedGlobalMedicineSearch(query);
-    if (cached.length > 0) {
-      setGlobalResults(cached);
-    } else {
-      setGlobalResults([]);
-    }
+    setGlobalResults(cached);
 
     try {
       if (!navigator.onLine) {
-        if (cached.length === 0) {
-          setGlobalError(
-            "لا يوجد اتصال بالإنترنت ولا توجد نتائج محفوظة لهذا البحث."
-          );
-        } else {
-          setGlobalError(
-            "أنت غير متصل بالإنترنت. هذه النتائج مسترجعة من ذاكرة الهاتف وقد تكون قديمة."
-          );
-        }
+        setGlobalError(
+          cached.length > 0
+            ? "أنت غير متصل بالإنترنت. هذه النتائج مسترجعة من ذاكرة الهاتف وقد تكون قديمة."
+            : "لا يوجد اتصال بالإنترنت ولا توجد نتائج محفوظة لهذا البحث."
+        );
         return;
       }
 
@@ -367,9 +360,7 @@ export default function App() {
       !form.ageInfo.trim() ||
       !form.usageNotes.trim()
     ) {
-      setFormError(
-        "يرجى إكمال جميع المعلومات قبل حفظ الدواء."
-      );
+      setFormError("يرجى إكمال جميع المعلومات قبل حفظ الدواء.");
       return;
     }
 
@@ -644,25 +635,14 @@ export default function App() {
           gap: 12px;
         }
 
-        .med-search-button {
+        .med-search-button,
+        .med-global-button,
+        .med-scan-button,
+        .med-add-button,
+        .med-save-button {
           width: 100%;
-          border: 0;
           border-radius: 11px;
           padding: 14px;
-          margin-top: 17px;
-          color: white;
-          background: #0878b4;
-          font-weight: bold;
-        }
-
-        .med-global-button {
-          width: 100%;
-          border: 1px solid #0878b4;
-          border-radius: 11px;
-          padding: 14px;
-          margin-top: 10px;
-          color: #0878b4;
-          background: #edf7fd;
           font-weight: bold;
           display: flex;
           align-items: center;
@@ -670,7 +650,26 @@ export default function App() {
           gap: 8px;
         }
 
-        .med-global-button:disabled {
+        .med-search-button,
+        .med-scan-button,
+        .med-add-button,
+        .med-save-button {
+          border: 0;
+          color: white;
+          background: #0878b4;
+        }
+
+        .med-search-button { margin-top: 17px; }
+
+        .med-global-button {
+          border: 1px solid #0878b4;
+          margin-top: 10px;
+          color: #0878b4;
+          background: #edf7fd;
+        }
+
+        .med-global-button:disabled,
+        .med-scan-button:disabled {
           opacity: .6;
           cursor: not-allowed;
         }
@@ -849,19 +848,11 @@ export default function App() {
           gap: 9px;
         }
 
-        .med-note {
-          background: #eaf5fc;
-          border-radius: 12px;
-          padding: 13px;
-          color: #285c7c;
-          font-size: 13px;
-          line-height: 1.9;
-        }
-
         .med-empty {
           text-align: center;
           padding: 28px 12px;
           color: #8190a3;
+          line-height: 1.8;
         }
 
         .med-empty svg {
@@ -897,10 +888,6 @@ export default function App() {
           font-weight: bold;
         }
 
-        .med-photo-button:active {
-          background: #e5f2fb;
-        }
-
         .med-preview {
           width: 100%;
           max-height: 280px;
@@ -910,27 +897,10 @@ export default function App() {
           margin-top: 15px;
         }
 
-        .med-scan-button {
-          width: 100%;
-          border: 0;
-          border-radius: 11px;
-          padding: 14px;
-          margin-top: 13px;
-          color: white;
-          background: #0878b4;
-          font-weight: bold;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          gap: 8px;
-        }
+        .med-scan-button { margin-top: 13px; }
 
-        .med-scan-button:disabled {
-          opacity: .55;
-          cursor: not-allowed;
-        }
-
-        .med-scan-error {
+        .med-scan-error,
+        .med-form-error {
           background: #fff5ed;
           color: #965327;
           border: 1px solid #f2ddcb;
@@ -954,22 +924,6 @@ export default function App() {
         }
 
         .med-hidden-input { display: none; }
-
-        .med-add-button {
-          width: 100%;
-          border: 0;
-          border-radius: 12px;
-          padding: 15px;
-          background: #0878b4;
-          color: white;
-          font-weight: bold;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 9px;
-        }
-
-        .med-add-button:active { background: #075b9b; }
 
         .med-form-field { margin-bottom: 13px; }
 
@@ -998,28 +952,11 @@ export default function App() {
           line-height: 1.8;
         }
 
-        .med-form-field input:focus,
-        .med-form-field textarea:focus {
-          border-color: #1684bd;
-          box-shadow: 0 0 0 3px rgba(22,132,189,.08);
-        }
-
         .med-form-hint {
           color: #7b899b;
           font-size: 12px;
           line-height: 1.7;
           margin-top: 5px;
-        }
-
-        .med-form-error {
-          background: #fff1ef;
-          color: #a43b32;
-          border: 1px solid #f2d2ce;
-          border-radius: 10px;
-          padding: 12px;
-          font-size: 13px;
-          line-height: 1.8;
-          margin-bottom: 12px;
         }
 
         .med-form-success {
@@ -1032,20 +969,7 @@ export default function App() {
           margin-bottom: 12px;
         }
 
-        .med-save-button {
-          width: 100%;
-          border: 0;
-          border-radius: 11px;
-          padding: 15px;
-          margin-top: 8px;
-          color: white;
-          background: #0878b4;
-          font-weight: bold;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          gap: 8px;
-        }
+        .med-save-button { margin-top: 8px; }
 
         .med-cancel-button {
           width: 100%;
@@ -1071,11 +995,6 @@ export default function App() {
         .med-status.error {
           background: #fff5ed;
           color: #965327;
-        }
-
-        .med-status.success {
-          background: #eaf8ef;
-          color: #236b3b;
         }
 
         .med-loading {
@@ -1128,13 +1047,9 @@ export default function App() {
       </header>
 
       <main className="med-container">
-
         <section className="med-panel">
           <h2>
-            <ScanSearch
-              size={20}
-              style={{ verticalAlign: "middle", marginLeft: 7 }}
-            />
+            <ScanSearch size={20} style={{ verticalAlign: "middle", marginLeft: 7 }} />
             التعرف على الدواء بالتصوير
           </h2>
 
@@ -1208,10 +1123,7 @@ export default function App() {
 
           {scanError && (
             <div className="med-scan-error">
-              <AlertTriangle
-                size={17}
-                style={{ verticalAlign: "middle", marginLeft: 5 }}
-              />
+              <AlertTriangle size={17} style={{ verticalAlign: "middle", marginLeft: 5 }} />
               {scanError}
             </div>
           )}
@@ -1241,11 +1153,8 @@ export default function App() {
             <div style={{ marginTop: 17 }}>
               <div className="med-result-title">
                 <h2>الأدوية المطابقة محلياً</h2>
-                <span className="med-count">
-                  {scanMatches.length} نتيجة
-                </span>
+                <span className="med-count">{scanMatches.length} نتيجة</span>
               </div>
-
               {renderMedicineList(scanMatches)}
             </div>
           )}
@@ -1258,10 +1167,7 @@ export default function App() {
 
         <section className="med-panel">
           <h2>
-            <Search
-              size={20}
-              style={{ verticalAlign: "middle", marginLeft: 7 }}
-            />
+            <Search size={20} style={{ verticalAlign: "middle", marginLeft: 7 }} />
             البحث عن دواء
           </h2>
 
@@ -1344,10 +1250,7 @@ export default function App() {
               setSelectedGlobal(null);
             }}
           >
-            <Search
-              size={17}
-              style={{ verticalAlign: "middle", marginLeft: 7 }}
-            />
+            <Search size={17} />
             عرض نتائج البحث المحلي
           </button>
 
@@ -1377,10 +1280,7 @@ export default function App() {
 
         <section className="med-panel">
           <h2>
-            <PlusCircle
-              size={20}
-              style={{ verticalAlign: "middle", marginLeft: 7 }}
-            />
+            <PlusCircle size={20} style={{ verticalAlign: "middle", marginLeft: 7 }} />
             إدارة قاعدة الأدوية
           </h2>
 
@@ -1454,7 +1354,7 @@ export default function App() {
                 <textarea
                   value={form.forms}
                   onChange={(e) => updateForm("forms", e.target.value)}
-                  placeholder={"اكتب كل شكل في سطر أو افصل بينها بفاصلة\nأقراص\nشراب\nتحاميل"}
+                  placeholder={"أقراص\nشراب\nتحاميل"}
                 />
                 <p className="med-form-hint">
                   يمكنك إدخال أكثر من شكل، وافصل بينها بفاصلة أو سطر جديد.
@@ -1493,7 +1393,7 @@ export default function App() {
                 <textarea
                   value={form.ageInfo}
                   onChange={(e) => updateForm("ageInfo", e.target.value)}
-                  placeholder="اكتب المعلومات المتعلقة بالعمر والفئات التي تحتاج إلى احتياط"
+                  placeholder="معلومات متعلقة بالعمر والفئات التي تحتاج إلى احتياط"
                 />
               </div>
 
@@ -1508,10 +1408,7 @@ export default function App() {
 
               {formError && (
                 <div className="med-form-error">
-                  <AlertTriangle
-                    size={16}
-                    style={{ verticalAlign: "middle", marginLeft: 5 }}
-                  />
+                  <AlertTriangle size={16} />
                   {formError}
                 </div>
               )}
@@ -1557,50 +1454,31 @@ export default function App() {
             </div>
 
             <div className="med-detail-section">
-              <h3>
-                <Database size={18} />
-                رقم التعريف العالمي
-              </h3>
-              <p className="med-detail-text" dir="ltr">
-                {selectedGlobal.rxcui}
-              </p>
+              <h3><Database size={18} /> رقم التعريف العالمي</h3>
+              <p className="med-detail-text" dir="ltr">{selectedGlobal.rxcui}</p>
             </div>
 
             <div className="med-detail-section">
-              <h3>
-                <Info size={18} />
-                الاسم البديل
-              </h3>
+              <h3><Info size={18} /> الاسم البديل</h3>
               <p className="med-detail-text">
                 {selectedGlobal.synonym || "لا توجد معلومات عن اسم بديل في النتيجة."}
               </p>
             </div>
 
             <div className="med-detail-section">
-              <h3>
-                <Package size={18} />
-                نوع السجل
-              </h3>
+              <h3><Package size={18} /> نوع السجل</h3>
               <p className="med-detail-text" dir="ltr">
                 {selectedGlobal.type || "غير محدد"}
               </p>
             </div>
 
             <div className="med-detail-section">
-              <h3>
-                <Globe size={18} />
-                مصدر المعلومات
-              </h3>
-              <p className="med-detail-text">
-                {selectedGlobal.source}
-              </p>
+              <h3><Globe size={18} /> مصدر المعلومات</h3>
+              <p className="med-detail-text">{selectedGlobal.source}</p>
             </div>
 
             <div className="med-detail-section">
-              <h3>
-                <Activity size={18} />
-                تاريخ جلب البيانات
-              </h3>
+              <h3><Activity size={18} /> تاريخ جلب البيانات</h3>
               <p className="med-detail-text" dir="ltr">
                 {new Date(selectedGlobal.fetchedAt).toLocaleString()}
               </p>
@@ -1625,9 +1503,7 @@ export default function App() {
 
               <div style={{ flex: 1 }}>
                 <h2>{selected.name}</h2>
-                <p>
-                  {selected.english} · {selected.category}
-                </p>
+                <p>{selected.english} · {selected.category}</p>
               </div>
 
               <button
@@ -1640,93 +1516,53 @@ export default function App() {
             </div>
 
             <div className="med-detail-section">
-              <h3>
-                <FlaskConical size={18} />
-                المادة الفعالة
-              </h3>
-              <p className="med-detail-text">
-                {selected.activeIngredient}
-              </p>
+              <h3><FlaskConical size={18} /> المادة الفعالة</h3>
+              <p className="med-detail-text">{selected.activeIngredient}</p>
             </div>
 
             <div className="med-detail-section">
-              <h3>
-                <Package size={18} />
-                الأشكال الدوائية
-              </h3>
+              <h3><Package size={18} /> الأشكال الدوائية</h3>
               <div className="med-info-list">
                 {selected.forms.map((item, i) => (
-                  <span className="med-info-chip" key={i}>
-                    {item}
-                  </span>
+                  <span className="med-info-chip" key={i}>{item}</span>
                 ))}
               </div>
             </div>
 
             <div className="med-detail-section">
-              <h3>
-                <Pill size={18} />
-                التركيزات الشائعة
-              </h3>
+              <h3><Pill size={18} /> التركيزات الشائعة</h3>
               <div className="med-info-list">
                 {selected.strengths.map((item, i) => (
-                  <span className="med-info-chip" key={i}>
-                    {item}
-                  </span>
+                  <span className="med-info-chip" key={i}>{item}</span>
                 ))}
               </div>
             </div>
 
             <div className="med-detail-section">
-              <h3>
-                <Stethoscope size={18} />
-                الاستخدامات الطبية
-              </h3>
+              <h3><Stethoscope size={18} /> الاستخدامات الطبية</h3>
               <ul>
-                {selected.uses.map((item, i) => (
-                  <li key={i}>{item}</li>
-                ))}
+                {selected.uses.map((item, i) => <li key={i}>{item}</li>)}
               </ul>
             </div>
 
             <div className="med-detail-section">
-              <h3>
-                <AlertTriangle size={18} />
-                التحذيرات والاحتياطات
-              </h3>
+              <h3><AlertTriangle size={18} /> التحذيرات والاحتياطات</h3>
               <ul>
-                {selected.warnings.map((item, i) => (
-                  <li key={i}>{item}</li>
-                ))}
+                {selected.warnings.map((item, i) => <li key={i}>{item}</li>)}
               </ul>
             </div>
 
             <div className="med-detail-section">
-              <h3>
-                <Info size={18} />
-                ملاحظات الاستعمال
-              </h3>
-              <p className="med-detail-text">
-                {selected.usageNotes}
-              </p>
+              <h3><Info size={18} /> ملاحظات الاستعمال</h3>
+              <p className="med-detail-text">{selected.usageNotes}</p>
             </div>
 
             <div className="med-detail-section">
-              <h3>
-                <Activity size={18} />
-                معلومات العمر
-              </h3>
-
-              <p className="med-detail-text">
-                {selected.ageInfo}
-              </p>
+              <h3><Activity size={18} /> معلومات العمر</h3>
+              <p className="med-detail-text">{selected.ageInfo}</p>
 
               {age !== "" && (
-                <p style={{
-                  fontSize: 13,
-                  color: "#52647a",
-                  marginTop: 10
-                }}>
+                <p style={{ fontSize: 13, color: "#52647a", marginTop: 10 }}>
                   العمر المدخل: {age} سنة
                   {weight ? ` · الوزن: ${weight} كغم` : ""}
                 </p>
@@ -1749,9 +1585,7 @@ export default function App() {
             <section className="med-panel">
               <div className="med-result-title">
                 <h2>نتائج البحث المحلي</h2>
-                <span className="med-count">
-                  {results.length} نتيجة
-                </span>
+                <span className="med-count">{results.length} نتيجة</span>
               </div>
 
               {results.length > 0 ? (
@@ -1771,15 +1605,10 @@ export default function App() {
               <section className="med-panel">
                 <div className="med-result-title">
                   <h2>
-                    <Globe
-                      size={19}
-                      style={{ verticalAlign: "middle", marginLeft: 6 }}
-                    />
+                    <Globe size={19} style={{ verticalAlign: "middle", marginLeft: 6 }} />
                     نتائج البحث العالمي
                   </h2>
-                  <span className="med-count">
-                    {globalResults.length} نتيجة
-                  </span>
+                  <span className="med-count">{globalResults.length} نتيجة</span>
                 </div>
 
                 {globalLoading && (
@@ -1791,10 +1620,7 @@ export default function App() {
 
                 {globalError && (
                   <div className="med-status error">
-                    <AlertTriangle
-                      size={17}
-                      style={{ verticalAlign: "middle", marginLeft: 5 }}
-                    />
+                    <AlertTriangle size={17} />
                     {globalError}
                   </div>
                 )}
@@ -1808,9 +1634,7 @@ export default function App() {
           <section className="med-panel">
             <div className="med-result-title">
               <h2>نتائج البحث العالمي</h2>
-              <span className="med-count">
-                {globalResults.length} نتيجة
-              </span>
+              <span className="med-count">{globalResults.length} نتيجة</span>
             </div>
 
             {globalLoading && (
@@ -1821,12 +1645,30 @@ export default function App() {
             )}
 
             {globalError && (
-              <div className="med-status error">
-                {globalError}
-              </div>
+              <div className="med-status error">{globalError}</div>
             )}
 
             {globalResults.length > 0 &&
               renderGlobalList(globalResults)}
           </section>
         ) : !showAddForm ? (
+          <section className="med-panel">
+            <div className="med-empty">
+              <BookOpen size={32} />
+              <p>مرحباً بك في الموسوعة الدوائية العالمية.</p>
+              <small>
+                اكتب اسم الدواء في مربع البحث لعرض المعلومات والنتائج المتاحة.
+              </small>
+            </div>
+          </section>
+        ) : null}
+
+        <footer className="med-footer">
+          الموسوعة الدوائية العالمية – World Drug Encyclopedia
+          <br />
+          المعلومات تثقيفية ولا تغني عن النشرة الرسمية أو استشارة الطبيب والصيدلي.
+        </footer>
+      </main>
+    </div>
+  );
+}
