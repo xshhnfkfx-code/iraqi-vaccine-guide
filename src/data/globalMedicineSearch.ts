@@ -1,6 +1,7 @@
 export type GlobalMedicineResult = {
   rxcui: string;
   name: string;
+  arabicName?: string;
   synonym: string;
   type: string;
   source: string;
@@ -32,6 +33,69 @@ type CachedSearch = {
   savedAt: string;
 };
 
+// أسماء عربية معروفة لبعض المواد الدوائية الشائعة
+const arabicMedicineNames: Record<string, string> = {
+  paracetamol: "باراسيتامول",
+  acetaminophen: "باراسيتامول",
+  ibuprofen: "إيبوبروفين",
+  amoxicillin: "أموكسيسيلين",
+  azithromycin: "أزيثروميسين",
+  metronidazole: "ميترونيدازول",
+  cetirizine: "سيتريزين",
+  loratadine: "لوراتادين",
+  omeprazole: "أوميبرازول",
+  metformin: "ميتفورمين",
+  amlodipine: "أملوديبين",
+  atorvastatin: "أتورفاستاتين",
+  aspirin: "أسبرين",
+  diclofenac: "ديكلوفيناك",
+  salbutamol: "سالبوتامول",
+  albuterol: "سالبوتامول",
+  prednisolone: "بريدنيزولون",
+  prednisone: "بريدنيزون",
+  domperidone: "دومبيريدون",
+  metoclopramide: "ميتوكلوبراميد",
+  ciprofloxacin: "سيبروفلوكساسين",
+  cefixime: "سيفيكسيم",
+  ceftriaxone: "سيفترياكسون",
+  doxycycline: "دوكسيسيكلين",
+  fluconazole: "فلوكونازول",
+  furosemide: "فوروسيميد",
+  losartan: "لوسارتان",
+  valsartan: "فالسارتان",
+  bisoprolol: "بيسوبرولول",
+  pantoprazole: "بانتوبرازول",
+  esomeprazole: "إيزوميبرازول",
+  levothyroxine: "ليفوثيروكسين",
+  warfarin: "وارفارين",
+  clopidogrel: "كلوبيدوغريل",
+  insulin: "إنسولين",
+  montelukast: "مونتيلوكاست",
+  gabapentin: "جابابنتين",
+  pregabalin: "بريجابالين",
+  tramadol: "ترامادول",
+  ondansetron: "أوندانسيترون",
+  iron: "الحديد",
+  ferrous: "الحديد",
+  folic: "حمض الفوليك",
+  cholecalciferol: "فيتامين د",
+  vitamin: "فيتامين",
+};
+
+function getArabicMedicineName(name: string): string | undefined {
+  const normalized = name.toLowerCase();
+
+  for (const [english, arabic] of Object.entries(arabicMedicineNames)) {
+    const pattern = new RegExp(`\\b${english}\\b`, "i");
+
+    if (pattern.test(normalized)) {
+      return arabic;
+    }
+  }
+
+  return undefined;
+}
+
 function loadCache(): CachedSearch[] {
   try {
     const saved = localStorage.getItem(CACHE_KEY);
@@ -59,11 +123,16 @@ export function getCachedGlobalMedicineSearch(
   query: string
 ): GlobalMedicineResult[] {
   const normalized = query.trim().toLowerCase();
+
   const cached = loadCache().find(
     (item) => item.query === normalized
   );
 
-  return cached?.results ?? [];
+  return (cached?.results ?? []).map((medicine) => ({
+    ...medicine,
+    arabicName:
+      medicine.arabicName || getArabicMedicineName(medicine.name),
+  }));
 }
 
 export async function searchGlobalMedicines(
@@ -100,6 +169,7 @@ export async function searchGlobalMedicines(
         results.push({
           rxcui: concept.rxcui,
           name: concept.name,
+          arabicName: getArabicMedicineName(concept.name),
           synonym: concept.synonym ?? "",
           type: concept.tty ?? group.tty ?? "",
           source: "RxNorm - U.S. National Library of Medicine",
