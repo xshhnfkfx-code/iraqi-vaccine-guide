@@ -4,7 +4,7 @@ import {
   X, ChevronLeft, Activity, Stethoscope, RotateCcw,
   Database, Camera, ImagePlus, ScanSearch, Loader2,
   FlaskConical, Package, Info, PlusCircle, Save, Globe,
-  RefreshCw, BookOpen
+  BookOpen
 } from "lucide-react";
 
 import { medicines } from "./data/medicineDatabase";
@@ -133,7 +133,12 @@ export default function App() {
         ...medicine.forms,
         ...medicine.strengths,
         ...medicine.uses,
-        ...medicine.warnings
+        ...medicine.warnings,
+        ...(medicine.brandNames || []),
+        ...(medicine.sideEffects || []),
+        ...(medicine.contraindications || []),
+        ...(medicine.interactions || []),
+        ...(medicine.precautions || [])
       ].join(" ");
 
       return normalize(searchableText).includes(query);
@@ -476,6 +481,43 @@ export default function App() {
         </button>
       </article>
     ));
+  }
+
+  // عرض قائمة اختيارية من المعلومات الدوائية الموسعة.
+  // لا يظهر القسم إذا لم تتوفر له بيانات.
+  function renderExtraList(
+    title: string,
+    items: string[] | undefined,
+    icon: React.ReactNode
+  ) {
+    if (!items || items.length === 0) return null;
+
+    return (
+      <div className="med-detail-section">
+        <h3>{icon} {title}</h3>
+        <ul>
+          {items.map((item, index) => (
+            <li key={`${title}-${index}`}>{item}</li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
+  // عرض معلومة نصية اختيارية.
+  function renderExtraText(
+    title: string,
+    value: string | undefined,
+    icon: React.ReactNode
+  ) {
+    if (!value || !value.trim()) return null;
+
+    return (
+      <div className="med-detail-section">
+        <h3>{icon} {title}</h3>
+        <p className="med-detail-text">{value}</p>
+      </div>
+    );
   }
 
   return (
@@ -1501,7 +1543,7 @@ export default function App() {
                 <Pill size={24} />
               </div>
 
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <h2>{selected.name}</h2>
                 <p>{selected.english} · {selected.category}</p>
               </div>
@@ -1519,6 +1561,17 @@ export default function App() {
               <h3><FlaskConical size={18} /> المادة الفعالة</h3>
               <p className="med-detail-text">{selected.activeIngredient}</p>
             </div>
+
+            {selected.brandNames && selected.brandNames.length > 0 && (
+              <div className="med-detail-section">
+                <h3><Package size={18} /> الأسماء التجارية</h3>
+                <div className="med-info-list">
+                  {selected.brandNames.map((item, i) => (
+                    <span className="med-info-chip" key={i}>{item}</span>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="med-detail-section">
               <h3><Package size={18} /> الأشكال الدوائية</h3>
@@ -1552,6 +1605,30 @@ export default function App() {
               </ul>
             </div>
 
+            {renderExtraList(
+              "الآثار الجانبية",
+              selected.sideEffects,
+              <AlertTriangle size={18} />
+            )}
+
+            {renderExtraList(
+              "موانع الاستعمال",
+              selected.contraindications,
+              <Info size={18} />
+            )}
+
+            {renderExtraList(
+              "التداخلات الدوائية",
+              selected.interactions,
+              <Activity size={18} />
+            )}
+
+            {renderExtraList(
+              "الاحتياطات الإضافية",
+              selected.precautions,
+              <ShieldCheckIcon />
+            )}
+
             <div className="med-detail-section">
               <h3><Info size={18} /> ملاحظات الاستعمال</h3>
               <p className="med-detail-text">{selected.usageNotes}</p>
@@ -1569,14 +1646,45 @@ export default function App() {
               )}
             </div>
 
+            {renderExtraText(
+              "معلومات الحمل",
+              selected.pregnancyInfo,
+              <HeartPulse size={18} />
+            )}
+
+            {renderExtraText(
+              "معلومات الرضاعة الطبيعية",
+              selected.breastfeedingInfo,
+              <HeartPulse size={18} />
+            )}
+
+            {renderExtraText(
+              "ظروف التخزين",
+              selected.storageInfo,
+              <Package size={18} />
+            )}
+
+            {renderExtraText(
+              "معلومات الجرعة الزائدة",
+              selected.overdoseInfo,
+              <AlertTriangle size={18} />
+            )}
+
+            {renderExtraList(
+              "المراجع الطبية",
+              selected.medicalReferences,
+              <BookOpen size={18} />
+            )}
+
             <div className="med-warning">
               <AlertTriangle size={20} />
               <span>
-                التركيزات المعروضة أمثلة وليست قائمة كاملة.
-                يجب التحقق من المادة الفعالة والتركيز والشكل الدوائي
-                على العبوة والنشرة. لا يمكن تحديد جرعة آمنة من هذه
-                المعلومات وحدها؛ ويجب مراعاة العمر والوزن والتشخيص
-                والحالة الصحية وتوجيه الطبيب أو الصيدلي.
+                المعلومات المعروضة تثقيفية وقد لا تشمل جميع التفاصيل الخاصة
+                بكل منتج أو شركة مصنّعة. الأسماء التجارية والتركيزات قد تختلف
+                حسب البلد. يجب الرجوع إلى النشرة الرسمية للمنتج والتحقق من
+                المادة الفعالة والتركيز والشكل الدوائي. لا يمكن تحديد جرعة
+                آمنة من هذه المعلومات وحدها؛ ويجب مراعاة العمر والوزن
+                والتشخيص والحالة الصحية وتوجيه الطبيب أو الصيدلي.
               </span>
             </div>
           </section>
@@ -1672,3 +1780,9 @@ export default function App() {
     </div>
   );
 }
+
+// أيقونة احتياطات إضافية
+function ShieldCheckIcon() {
+  return <Info size={18} />;
+}
+
