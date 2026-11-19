@@ -182,6 +182,23 @@ function findMedicineKeys(name: string): string[] {
   return matches;
 }
 
+// توحيد أسماء المواد التي لها أكثر من اسم
+function normalizeMedicineKey(key: string): string {
+  if (key === "paracetamol" || key === "acetaminophen") {
+    return "paracetamol";
+  }
+
+  if (key === "salbutamol" || key === "albuterol") {
+    return "salbutamol";
+  }
+
+  if (key === "prednisolone" || key === "prednisone") {
+    return "corticosteroid";
+  }
+
+  return key;
+}
+
 function getArabicMedicineName(name: string): string | undefined {
   const keys = findMedicineKeys(name);
 
@@ -223,6 +240,85 @@ function enrichMedicine(
   };
 }
 
+// تحديد المواد المطلوبة في البحث
+function getQueryMedicineKeys(query: string): string[] {
+  return [
+    ...new Set(
+      findMedicineKeys(query).map(normalizeMedicineKey)
+    ),
+  ];
+}
+
+// التحقق من أن النتيجة دواء مركب
+function isCombinationMedicine(name: string): boolean {
+  const keys = findMedicineKeys(name).map(normalizeMedicineKey);
+
+  // وجود أكثر من مادة فعالة معروفة
+  if (new Set(keys).size > 1) {
+    return true;
+  }
+
+  // وجود فاصل يدل غالباً على تركيبة دوائية
+  if (/[+/]/.test(name)) {
+    return true;
+  }
+
+  return false;
+}
+
+// ترتيب النتائج وتفضيل الدواء المفرد عند البحث عن مادة واحدة
+function filterAndSortResults(
+  results: GlobalMedicineResult[],
+  query: string
+): GlobalMedicineResult[] {
+  const queryKeys = getQueryMedicineKeys(query);
+
+  if (queryKeys.length === 0) {
+    return results;
+  }
+
+  const matchingResults = results.filter((medicine) => {
+    const medicineKeys = findMedicineKeys(medicine.name)
+      .map(normalizeMedicineKey);
+
+    return queryKeys.some((key) => medicineKeys.includes(key));
+  });
+
+  if (matchingResults.length === 0) {
+    return results;
+  }
+
+  // إذا وجدت نتائج للمادة المفردة، نفضلها على التركيبات
+  const singleIngredientResults = matchingResults.filter(
+    (medicine) => !isCombinationMedicine(medicine.name)
+  );
+
+  const finalResults =
+    singleIngredientResults.length > 0
+      ? singleIngredientResults
+      : matchingResults;
+
+  // إعطاء الأولوية للاسم الأقرب إلى كلمة البحث
+  const normalizedQuery = query.trim().toLowerCase();
+
+  return [...finalResults].sort((a, b) => {
+    const aName = a.name.toLowerCase();
+    const bName = b.name.toLowerCase();
+
+    const aExact = aName === normalizedQuery ? 1 : 0;
+    const bExact = bName === normalizedQuery ? 1 : 0;
+
+    if (aExact !== bExact) {
+      return bExact - aExact;
+    }
+
+    const aStarts = aName.startsWith(normalizedQuery) ? 1 : 0;
+    const bStarts = bName.startsWith(normalizedQuery) ? 1 : 0;
+
+    return bStarts - aStarts;
+  });
+}
+
 function loadCache(): CachedSearch[] {
   try {
     const saved = localStorage.getItem(CACHE_KEY);
@@ -257,7 +353,9 @@ export function getCachedGlobalMedicineSearch(
     (item) => item.query === normalized
   );
 
-  return (cached?.results ?? []).map(enrichMedicine);
+  const results = (cached?.results ?? []).map(enrichMedicine);
+
+  return filterAndSortResults(results, query);
 }
 
 export async function searchGlobalMedicines(
@@ -304,22 +402,28 @@ export async function searchGlobalMedicines(
       }
     }
 
+    const filteredResults = filterAndSortResults(
+      results,
+      query
+    );
+
     const cache = loadCache().filter(
       (item) => item.query !== normalized
     );
 
     cache.push({
       query: normalized,
-      results,
+      results: filteredResults,
       savedAt: fetchedAt,
     });
 
     saveCache(cache);
 
-    return results;
+    return filteredResults;
   } catch (error) {
     console.error("فشل البحث العالمي:", error);
 
     return getCachedGlobalMedicineSearch(query);
   }
 }
+
