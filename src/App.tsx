@@ -479,51 +479,7 @@ export default function App() {
         
 
 
-            <div className="med-detail-section">
-              <h3><Info size={18} /> الاسم البديل</h3>
-              <p className="med-detail-text">
-                {selectedGlobal.synonym || "لا توجد معلومات عن اسم بديل في النتيجة."}
-              </p>
-            </div>
-
-            {selectedGlobal.arabicUses &&
-            selectedGlobal.arabicUses.length > 0 ? (
-              renderExtraList(
-                "الاستخدامات الطبية بالعربية",
-                selectedGlobal.arabicUses,
-                <Stethoscope size={18} />
-              )
-            ) : (
-              <div className="med-detail-section">
-                <h3>
-                  <Stethoscope size={18} /> الاستخدامات الطبية بالعربية
-                </h3>
-                <p className="med-detail-text">
-                  لم تتوفر استخدامات عربية موثوقة لهذه النتيجة في قاعدة المعلومات الحالية.
-                </p>
-              </div>
-            )}
-
-            <div className="med-detail-section">
-              <h3><Package size={18} /> نوع السجل</h3>
-              <p className="med-detail-text" dir="ltr">
-                {selectedGlobal.type || "غير محدد"}
-              </p>
-            </div>
-)}
-
-
-        <button
-          className="med-open"
-          onClick={() => openMedicine(medicine)}
-        >
-          <span>التفاصيل</span>
-          <ChevronLeft size={16} />
-        </button>
-      </article>
-    ));
-  }
-
+            
   function renderGlobalList(items: GlobalMedicineResult[]) {
     return items.map((medicine) => (
       <article className="med-result" key={medicine.rxcui}>
