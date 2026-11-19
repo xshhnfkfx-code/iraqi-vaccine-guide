@@ -460,12 +460,7 @@ export default function App() {
         </div>
 
         
-<div className="med-detail-section">
-  <h3><Info size={18} /> الاسم البديل</h3>
-  <p className="med-detail-text">
-    {selectedGlobal.synonym || "لا توجد معلومات عن اسم بديل في النتيجة."}
-  </p>
-</div>
+
 
 {selectedGlobal.arabicUses &&
 selectedGlobal.arabicUses.length > 0 ? (
