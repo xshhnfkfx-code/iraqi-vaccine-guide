@@ -4,7 +4,7 @@ import {
   HeartPulse, X, ChevronLeft, Activity, Stethoscope,
   BookOpen, RotateCcw, Database, Camera, ImagePlus,
   ScanSearch, Loader2, FlaskConical, Package, Info,
-  PlusCircle, Save, ClipboardList
+  PlusCircle, Save, Globe, RefreshCw
 } from "lucide-react";
 
 import { medicines } from "./data/medicineDatabase";
@@ -13,6 +13,13 @@ import {
   loadCustomMedicines,
   saveCustomMedicines
 } from "./data/customMedicines";
+import {
+  searchGlobalMedicines,
+  getCachedGlobalMedicineSearch
+} from "./data/globalMedicineSearch";
+import type {
+  GlobalMedicineResult
+} from "./data/globalMedicineSearch";
 import { createWorker } from "tesseract.js";
 
 const emptyForm = {
@@ -33,6 +40,9 @@ export default function App() {
   const [age, setAge] = useState("");
   const [weight, setWeight] = useState("");
   const [selected, setSelected] = useState<Medicine | null>(null);
+  const [selectedGlobal, setSelectedGlobal] =
+    useState<GlobalMedicineResult | null>(null);
+
   const [online, setOnline] = useState(
     typeof navigator !== "undefined" ? navigator.onLine : false
   );
@@ -52,6 +62,12 @@ export default function App() {
   const [scanMatches, setScanMatches] = useState<Medicine[]>([]);
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState("");
+
+  const [globalResults, setGlobalResults] =
+    useState<GlobalMedicineResult[]>([]);
+  const [globalLoading, setGlobalLoading] = useState(false);
+  const [globalError, setGlobalError] = useState("");
+  const [globalSearched, setGlobalSearched] = useState(false);
 
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
@@ -123,11 +139,77 @@ export default function App() {
     });
   }, [search, allMedicines]);
 
+  async function runGlobalSearch() {
+    const query = search.trim();
+
+    if (!query) {
+      setGlobalError("اكتب اسم الدواء أولاً لإجراء البحث العالمي.");
+      setGlobalSearched(false);
+      return;
+    }
+
+    setSelected(null);
+    setSelectedGlobal(null);
+    setGlobalLoading(true);
+    setGlobalError("");
+    setGlobalSearched(true);
+
+    const cached = getCachedGlobalMedicineSearch(query);
+    if (cached.length > 0) {
+      setGlobalResults(cached);
+    } else {
+      setGlobalResults([]);
+    }
+
+    try {
+      if (!navigator.onLine) {
+        if (cached.length === 0) {
+          setGlobalError(
+            "لا يوجد اتصال بالإنترنت ولا توجد نتائج محفوظة لهذا البحث."
+          );
+        } else {
+          setGlobalError(
+            "أنت غير متصل بالإنترنت. هذه النتائج مسترجعة من ذاكرة الهاتف وقد تكون قديمة."
+          );
+        }
+        return;
+      }
+
+      const data = await searchGlobalMedicines(query);
+      setGlobalResults(data);
+
+      if (data.length === 0) {
+        setGlobalError(
+          "لم يعثر المصدر العالمي على نتائج لهذا الاسم. جرّب الاسم العلمي باللغة الإنجليزية."
+        );
+      }
+    } catch (error) {
+      console.error("Global search error:", error);
+
+      if (cached.length > 0) {
+        setGlobalResults(cached);
+        setGlobalError(
+          "تعذر تحديث النتائج من الإنترنت. تظهر النتائج المحفوظة سابقاً."
+        );
+      } else {
+        setGlobalError(
+          "تعذر الاتصال بمصدر البحث العالمي. تحقق من الإنترنت وحاول مجدداً."
+        );
+      }
+    } finally {
+      setGlobalLoading(false);
+    }
+  }
+
   function reset() {
     setSearch("");
     setAge("");
     setWeight("");
     setSelected(null);
+    setSelectedGlobal(null);
+    setGlobalResults([]);
+    setGlobalError("");
+    setGlobalSearched(false);
     setImageFile(null);
     setImagePreview("");
     setScanText("");
@@ -151,6 +233,7 @@ export default function App() {
     setScanMatches([]);
     setScanError("");
     setSelected(null);
+    setSelectedGlobal(null);
 
     const reader = new FileReader();
 
@@ -216,7 +299,7 @@ export default function App() {
 
         if (matches.length === 0) {
           setScanError(
-            "تمت قراءة النص، لكن لم نجد اسماً مطابقاً في قاعدة الأدوية. يمكنك البحث يدوياً بالاسم."
+            "تمت قراءة النص، لكن لم نجد اسماً مطابقاً في قاعدة الأدوية المحلية. يمكنك البحث عالمياً بالاسم."
           );
         }
       }
@@ -239,6 +322,14 @@ export default function App() {
 
   function openMedicine(medicine: Medicine) {
     setSelected(medicine);
+    setSelectedGlobal(null);
+    setShowAddForm(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function openGlobalMedicine(medicine: GlobalMedicineResult) {
+    setSelectedGlobal(medicine);
+    setSelected(null);
     setShowAddForm(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -337,6 +428,7 @@ export default function App() {
     setFormSuccess("تمت إضافة الدواء بنجاح.");
     setSearch("");
     setSelected(newMedicine);
+    setSelectedGlobal(null);
     setShowAddForm(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -353,11 +445,40 @@ export default function App() {
           <small>
             {medicine.english} · {medicine.category}
           </small>
+          <small className="source-local">قاعدة البيانات المحلية</small>
         </div>
 
         <button
           className="med-open"
           onClick={() => openMedicine(medicine)}
+        >
+          <span>التفاصيل</span>
+          <ChevronLeft size={16} />
+        </button>
+      </article>
+    ));
+  }
+
+  function renderGlobalList(items: GlobalMedicineResult[]) {
+    return items.map((medicine) => (
+      <article className="med-result" key={medicine.rxcui}>
+        <div className="med-pill-icon global-icon">
+          <Globe size={21} />
+        </div>
+
+        <div className="med-result-info">
+          <strong>{medicine.name}</strong>
+          <small>
+            {medicine.synonym || "لا يوجد اسم بديل مسجل"}
+          </small>
+          <small className="source-global">
+            نتيجة عالمية · {medicine.type || "RxNorm"}
+          </small>
+        </div>
+
+        <button
+          className="med-open"
+          onClick={() => openGlobalMedicine(medicine)}
         >
           <span>التفاصيل</span>
           <ChevronLeft size={16} />
@@ -534,6 +655,26 @@ export default function App() {
           font-weight: bold;
         }
 
+        .med-global-button {
+          width: 100%;
+          border: 1px solid #0878b4;
+          border-radius: 11px;
+          padding: 14px;
+          margin-top: 10px;
+          color: #0878b4;
+          background: #edf7fd;
+          font-weight: bold;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+        }
+
+        .med-global-button:disabled {
+          opacity: .6;
+          cursor: not-allowed;
+        }
+
         .med-reset {
           display: flex;
           align-items: center;
@@ -588,6 +729,11 @@ export default function App() {
           flex-shrink: 0;
         }
 
+        .global-icon {
+          color: #0878b4;
+          background: #e8f5ff;
+        }
+
         .med-result-info {
           flex: 1;
           min-width: 0;
@@ -596,13 +742,18 @@ export default function App() {
         .med-result-info strong {
           display: block;
           font-size: 15px;
+          overflow-wrap: anywhere;
         }
 
         .med-result-info small {
           color: #7b899b;
           display: block;
           margin-top: 5px;
+          overflow-wrap: anywhere;
         }
+
+        .source-local { color: #278052 !important; }
+        .source-global { color: #0878b4 !important; }
 
         .med-open {
           background: #edf6fc;
@@ -614,6 +765,7 @@ export default function App() {
           align-items: center;
           gap: 3px;
           font-size: 12px;
+          flex-shrink: 0;
         }
 
         .med-detail-head {
@@ -629,6 +781,7 @@ export default function App() {
           color: #77869a;
           font-size: 13px;
           margin: 6px 0 0;
+          overflow-wrap: anywhere;
         }
 
         .med-close {
@@ -663,6 +816,7 @@ export default function App() {
           color: #4f6177;
           line-height: 1.9;
           font-size: 14px;
+          overflow-wrap: anywhere;
         }
 
         .med-info-list {
@@ -903,6 +1057,37 @@ export default function App() {
           background: white;
         }
 
+        .med-status {
+          border-radius: 10px;
+          padding: 12px;
+          margin-top: 12px;
+          font-size: 13px;
+          line-height: 1.8;
+          background: #f3f7fb;
+          color: #52647a;
+          overflow-wrap: anywhere;
+        }
+
+        .med-status.error {
+          background: #fff5ed;
+          color: #965327;
+        }
+
+        .med-status.success {
+          background: #eaf8ef;
+          color: #236b3b;
+        }
+
+        .med-loading {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 9px;
+          padding: 18px;
+          color: #0878b4;
+          font-size: 14px;
+        }
+
         @media(max-width:520px) {
           .med-fields {
             grid-template-columns: 1fr;
@@ -923,8 +1108,8 @@ export default function App() {
               <Pill size={27} />
             </div>
             <div>
-              <strong>دليل الأدوية الشامل</strong>
-              <small>Medicine Guide</small>
+              <strong>الموسوعة الدوائية العالمية</strong>
+              <small>World Drug Encyclopedia</small>
             </div>
           </div>
 
@@ -937,7 +1122,7 @@ export default function App() {
         <div className="med-intro">
           <h1>مرجعك الدوائي في مكان واحد</h1>
           <p>
-            ابحث عن العلاج أو التقط صورة لعلبته لمعرفة المعلومات المتاحة.
+            ابحث في قاعدة الأدوية المحلية أو استكشف الأدوية من المصدر العالمي.
           </p>
         </div>
       </header>
@@ -1042,6 +1227,8 @@ export default function App() {
                 onClick={() => {
                   setSearch(scanText);
                   setSelected(null);
+                  setSelectedGlobal(null);
+                  setGlobalSearched(false);
                 }}
               >
                 <Search size={17} />
@@ -1053,7 +1240,7 @@ export default function App() {
           {scanMatches.length > 0 && (
             <div style={{ marginTop: 17 }}>
               <div className="med-result-title">
-                <h2>الأدوية المطابقة</h2>
+                <h2>الأدوية المطابقة محلياً</h2>
                 <span className="med-count">
                   {scanMatches.length} نتيجة
                 </span>
@@ -1070,10 +1257,17 @@ export default function App() {
         </section>
 
         <section className="med-panel">
-          <h2>البحث عن دواء</h2>
+          <h2>
+            <Search
+              size={20}
+              style={{ verticalAlign: "middle", marginLeft: 7 }}
+            />
+            البحث عن دواء
+          </h2>
 
           <p className="med-subtitle">
-            اكتب الاسم التجاري أو العلمي أو المادة الفعالة أو الشكل الدوائي.
+            ابحث محلياً أو عبر قاعدة RxNorm العالمية باستخدام الاسم التجاري
+            أو العلمي أو المادة الفعالة.
           </p>
 
           <label className="med-label">اسم العلاج أو المادة الفعالة</label>
@@ -1086,6 +1280,10 @@ export default function App() {
               onChange={(e) => {
                 setSearch(e.target.value);
                 setSelected(null);
+                setSelectedGlobal(null);
+                setGlobalResults([]);
+                setGlobalError("");
+                setGlobalSearched(false);
               }}
               placeholder="مثال: Paracetamol أو باراسيتامول"
             />
@@ -1095,6 +1293,10 @@ export default function App() {
                 onClick={() => {
                   setSearch("");
                   setSelected(null);
+                  setSelectedGlobal(null);
+                  setGlobalResults([]);
+                  setGlobalError("");
+                  setGlobalSearched(false);
                 }}
                 className="med-close"
                 aria-label="مسح البحث"
@@ -1137,13 +1339,34 @@ export default function App() {
 
           <button
             className="med-search-button"
-            onClick={() => setSelected(null)}
+            onClick={() => {
+              setSelected(null);
+              setSelectedGlobal(null);
+            }}
           >
             <Search
               size={17}
               style={{ verticalAlign: "middle", marginLeft: 7 }}
             />
-            عرض نتائج البحث
+            عرض نتائج البحث المحلي
+          </button>
+
+          <button
+            className="med-global-button"
+            onClick={runGlobalSearch}
+            disabled={globalLoading}
+          >
+            {globalLoading ? (
+              <>
+                <Loader2 size={18} />
+                جارٍ البحث في قاعدة البيانات العالمية...
+              </>
+            ) : (
+              <>
+                <Globe size={18} />
+                البحث في الموسوعة الدوائية العالمية
+              </>
+            )}
           </button>
 
           <button className="med-reset" onClick={reset}>
@@ -1170,6 +1393,7 @@ export default function App() {
             onClick={() => {
               setShowAddForm((previous) => !previous);
               setSelected(null);
+              setSelectedGlobal(null);
               setFormError("");
               setFormSuccess("");
               window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1311,7 +1535,88 @@ export default function App() {
           )}
         </section>
 
-        {selected ? (
+        {selectedGlobal ? (
+          <section className="med-panel">
+            <div className="med-detail-head">
+              <div className="med-pill-icon global-icon">
+                <Globe size={24} />
+              </div>
+
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h2>{selectedGlobal.name}</h2>
+                <p>نتيجة من قاعدة RxNorm العالمية</p>
+              </div>
+
+              <button
+                onClick={() => setSelectedGlobal(null)}
+                className="med-close"
+                aria-label="إغلاق التفاصيل"
+              >
+                <X size={21} />
+              </button>
+            </div>
+
+            <div className="med-detail-section">
+              <h3>
+                <Database size={18} />
+                رقم التعريف العالمي
+              </h3>
+              <p className="med-detail-text" dir="ltr">
+                {selectedGlobal.rxcui}
+              </p>
+            </div>
+
+            <div className="med-detail-section">
+              <h3>
+                <Info size={18} />
+                الاسم البديل
+              </h3>
+              <p className="med-detail-text">
+                {selectedGlobal.synonym || "لا توجد معلومات عن اسم بديل في النتيجة."}
+              </p>
+            </div>
+
+            <div className="med-detail-section">
+              <h3>
+                <Package size={18} />
+                نوع السجل
+              </h3>
+              <p className="med-detail-text" dir="ltr">
+                {selectedGlobal.type || "غير محدد"}
+              </p>
+            </div>
+
+            <div className="med-detail-section">
+              <h3>
+                <Globe size={18} />
+                مصدر المعلومات
+              </h3>
+              <p className="med-detail-text">
+                {selectedGlobal.source}
+              </p>
+            </div>
+
+            <div className="med-detail-section">
+              <h3>
+                <Activity size={18} />
+                تاريخ جلب البيانات
+              </h3>
+              <p className="med-detail-text" dir="ltr">
+                {new Date(selectedGlobal.fetchedAt).toLocaleString()}
+              </p>
+            </div>
+
+            <div className="med-warning">
+              <AlertTriangle size={20} />
+              <span>
+                هذه النتيجة تعريفية من قاعدة RxNorm وليست نشرة دوائية كاملة.
+                لا تتضمن هذه النتيجة وحدها جميع الاستعمالات أو التحذيرات
+                أو الجرعات أو التداخلات. يجب الرجوع إلى النشرة الرسمية
+                والجهات الصحية المختصة قبل اتخاذ أي قرار علاجي.
+              </span>
+            </div>
+          </section>
+        ) : selected ? (
           <section className="med-panel">
             <div className="med-detail-head">
               <div className="med-pill-icon">
@@ -1440,85 +1745,88 @@ export default function App() {
             </div>
           </section>
         ) : search.trim() && !showAddForm ? (
+          <>
+            <section className="med-panel">
+              <div className="med-result-title">
+                <h2>نتائج البحث المحلي</h2>
+                <span className="med-count">
+                  {results.length} نتيجة
+                </span>
+              </div>
+
+              {results.length > 0 ? (
+                renderMedicineList(results)
+              ) : (
+                <div className="med-empty">
+                  <Search size={30} />
+                  <p>لم نعثر على الدواء في قاعدة البيانات المحلية.</p>
+                  <small>
+                    يمكنك استخدام البحث العالمي أو إضافة الدواء بعد التحقق من معلوماته.
+                  </small>
+                </div>
+              )}
+            </section>
+
+            {globalSearched && (
+              <section className="med-panel">
+                <div className="med-result-title">
+                  <h2>
+                    <Globe
+                      size={19}
+                      style={{ verticalAlign: "middle", marginLeft: 6 }}
+                    />
+                    نتائج البحث العالمي
+                  </h2>
+                  <span className="med-count">
+                    {globalResults.length} نتيجة
+                  </span>
+                </div>
+
+                {globalLoading && (
+                  <div className="med-loading">
+                    <Loader2 size={20} />
+                    جارٍ جلب النتائج العالمية...
+                  </div>
+                )}
+
+                {globalError && (
+                  <div className="med-status error">
+                    <AlertTriangle
+                      size={17}
+                      style={{ verticalAlign: "middle", marginLeft: 5 }}
+                    />
+                    {globalError}
+                  </div>
+                )}
+
+                {globalResults.length > 0 &&
+                  renderGlobalList(globalResults)}
+              </section>
+            )}
+          </>
+        ) : globalSearched && !showAddForm ? (
           <section className="med-panel">
             <div className="med-result-title">
-              <h2>نتائج البحث</h2>
+              <h2>نتائج البحث العالمي</h2>
               <span className="med-count">
-                {results.length} نتيجة
+                {globalResults.length} نتيجة
               </span>
             </div>
 
-            {results.length > 0 ? (
-              renderMedicineList(results)
-            ) : (
-              <div className="med-empty">
-                <Search size={30} />
-                <p>
-                  لم نعثر على الدواء في قاعدة البيانات المحلية.
-                </p>
-                <small>
-                  {online
-                    ? "يمكن إضافة الدواء بعد التحقق من معلوماته من مصدر موثوق."
-                    : "يمكنك إضافته إلى قاعدة البيانات المحلية بعد التحقق من معلوماته."}
-                </small>
+            {globalLoading && (
+              <div className="med-loading">
+                <Loader2 size={20} />
+                جارٍ جلب النتائج العالمية...
               </div>
             )}
+
+            {globalError && (
+              <div className="med-status error">
+                {globalError}
+              </div>
+            )}
+
+            {globalResults.length > 0 &&
+              renderGlobalList(globalResults)}
           </section>
         ) : !showAddForm ? (
-          <section className="med-panel">
-            <div className="med-empty">
-              <BookOpen size={35} />
-              <h2>ابدأ البحث عن علاج</h2>
-              <p>
-                اكتب اسم الدواء أو استخدم ميزة التصوير.
-              </p>
-            </div>
-          </section>
-        ) : null}
-
-        <section className="med-note" style={{ marginBottom: 15 }}>
-          <ShieldCheck
-            size={19}
-            style={{ verticalAlign: "middle", marginLeft: 7 }}
-          />
-          المعلومات المعروضة إرشادية. يجب مراجعة المعلومات الدوائية
-          والتحقق منها من مصادر موثوقة قبل إضافتها أو استخدامها.
-          لا يجوز الاعتماد على التعرف بالصورة وحده لتحديد دواء أو جرعته.
-        </section>
-
-        <section className="med-panel">
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10
-          }}>
-            <Database size={20} color="#0878b4" />
-            <div>
-              <strong>قاعدة الأدوية المحلية</strong>
-              <p style={{
-                margin: "5px 0 0",
-                color: "#77869a",
-                fontSize: 13
-              }}>
-                عدد الأدوية المسجلة: {allMedicines.length}
-              </p>
-              <p style={{
-                margin: "5px 0 0",
-                color: "#77869a",
-                fontSize: 13
-              }}>
-                الأدوية المضافة من المستخدم: {customMedicines.length}
-              </p>
-            </div>
-          </div>
-        </section>
-
-        <footer className="med-footer">
-          دليل الأدوية الشامل © {new Date().getFullYear()}
-          <br />
-          مرجع معلوماتي وليس بديلاً عن الاستشارة الطبية.
-        </footer>
-      </main>
-    </div>
-  );
-}
