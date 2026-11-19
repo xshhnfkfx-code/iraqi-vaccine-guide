@@ -3,12 +3,30 @@ import {
   Search, Pill, Wifi, WifiOff, AlertTriangle, ShieldCheck,
   HeartPulse, X, ChevronLeft, Activity, Stethoscope,
   BookOpen, RotateCcw, Database, Camera, ImagePlus,
-  ScanSearch, Loader2, FlaskConical, Package, Info
+  ScanSearch, Loader2, FlaskConical, Package, Info,
+  PlusCircle, Save, ClipboardList
 } from "lucide-react";
 
 import { medicines } from "./data/medicineDatabase";
 import type { Medicine } from "./data/medicineDatabase";
+import {
+  loadCustomMedicines,
+  saveCustomMedicines
+} from "./data/customMedicines";
 import { createWorker } from "tesseract.js";
+
+const emptyForm = {
+  name: "",
+  english: "",
+  category: "",
+  activeIngredient: "",
+  forms: "",
+  strengths: "",
+  uses: "",
+  warnings: "",
+  ageInfo: "",
+  usageNotes: ""
+};
 
 export default function App() {
   const [search, setSearch] = useState("");
@@ -18,6 +36,15 @@ export default function App() {
   const [online, setOnline] = useState(
     typeof navigator !== "undefined" ? navigator.onLine : false
   );
+
+  const [customMedicines, setCustomMedicines] = useState<Medicine[]>(
+    () => loadCustomMedicines()
+  );
+
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [form, setForm] = useState(emptyForm);
+  const [formError, setFormError] = useState("");
+  const [formSuccess, setFormSuccess] = useState("");
 
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState("");
@@ -29,8 +56,14 @@ export default function App() {
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
 
+  const allMedicines = useMemo(
+    () => [...medicines, ...customMedicines],
+    [customMedicines]
+  );
+
   useEffect(() => {
     const update = () => setOnline(navigator.onLine);
+
     window.addEventListener("online", update);
     window.addEventListener("offline", update);
 
@@ -39,6 +72,16 @@ export default function App() {
       window.removeEventListener("offline", update);
     };
   }, []);
+
+  useEffect(() => {
+    try {
+      saveCustomMedicines(customMedicines);
+    } catch {
+      setFormError(
+        "تعذر حفظ الأدوية في الهاتف. قد تكون مساحة التخزين غير كافية."
+      );
+    }
+  }, [customMedicines]);
 
   function normalize(value: string) {
     return value
@@ -53,11 +96,18 @@ export default function App() {
       .trim();
   }
 
+  function splitItems(value: string): string[] {
+    return value
+      .split(/[\n،,;]+/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
   const results = useMemo(() => {
     const query = normalize(search);
     if (!query) return [];
 
-    return medicines.filter((medicine) => {
+    return allMedicines.filter((medicine) => {
       const searchableText = [
         medicine.name,
         medicine.english,
@@ -71,7 +121,7 @@ export default function App() {
 
       return normalize(searchableText).includes(query);
     });
-  }, [search]);
+  }, [search, allMedicines]);
 
   function reset() {
     setSearch("");
@@ -120,7 +170,7 @@ export default function App() {
 
     if (!normalizedText) return [];
 
-    return medicines.filter((medicine) => {
+    return allMedicines.filter((medicine) => {
       const name = normalize(medicine.name);
       const english = normalize(medicine.english);
       const ingredient = normalize(medicine.activeIngredient);
@@ -166,7 +216,7 @@ export default function App() {
 
         if (matches.length === 0) {
           setScanError(
-            "تمت قراءة النص، لكن لم نجد اسماً مطابقاً في قاعدة الأدوية المحلية. يمكنك البحث يدوياً بالاسم."
+            "تمت قراءة النص، لكن لم نجد اسماً مطابقاً في قاعدة الأدوية. يمكنك البحث يدوياً بالاسم."
           );
         }
       }
@@ -189,7 +239,131 @@ export default function App() {
 
   function openMedicine(medicine: Medicine) {
     setSelected(medicine);
+    setShowAddForm(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function updateForm(field: keyof typeof emptyForm, value: string) {
+    setForm((previous) => ({
+      ...previous,
+      [field]: value
+    }));
+    setFormError("");
+    setFormSuccess("");
+  }
+
+  function addMedicine() {
+    setFormError("");
+    setFormSuccess("");
+
+    if (
+      !form.name.trim() ||
+      !form.english.trim() ||
+      !form.category.trim() ||
+      !form.activeIngredient.trim()
+    ) {
+      setFormError(
+        "يرجى إدخال الاسم العربي والإنجليزي والتصنيف والمادة الفعالة على الأقل."
+      );
+      return;
+    }
+
+    if (
+      !form.forms.trim() ||
+      !form.strengths.trim() ||
+      !form.uses.trim() ||
+      !form.warnings.trim() ||
+      !form.ageInfo.trim() ||
+      !form.usageNotes.trim()
+    ) {
+      setFormError(
+        "يرجى إكمال جميع المعلومات قبل حفظ الدواء."
+      );
+      return;
+    }
+
+    const normalizedName = normalize(form.name);
+    const normalizedEnglish = normalize(form.english);
+    const normalizedIngredient = normalize(form.activeIngredient);
+
+    const duplicate = allMedicines.some((medicine) => {
+      return (
+        normalize(medicine.name) === normalizedName ||
+        normalize(medicine.english) === normalizedEnglish ||
+        normalize(medicine.activeIngredient) === normalizedIngredient
+      );
+    });
+
+    if (duplicate) {
+      setFormError(
+        "هذا الدواء أو مادته الفعالة مسجل مسبقاً في قاعدة البيانات."
+      );
+      return;
+    }
+
+    const nextId =
+      allMedicines.length > 0
+        ? Math.max(...allMedicines.map((item) => item.id)) + 1
+        : 1;
+
+    const newMedicine: Medicine = {
+      id: nextId,
+      name: form.name.trim(),
+      english: form.english.trim(),
+      category: form.category.trim(),
+      activeIngredient: form.activeIngredient.trim(),
+      forms: splitItems(form.forms),
+      strengths: splitItems(form.strengths),
+      uses: splitItems(form.uses),
+      warnings: splitItems(form.warnings),
+      ageInfo: form.ageInfo.trim(),
+      usageNotes: form.usageNotes.trim()
+    };
+
+    if (
+      !newMedicine.forms.length ||
+      !newMedicine.strengths.length ||
+      !newMedicine.uses.length ||
+      !newMedicine.warnings.length
+    ) {
+      setFormError(
+        "يرجى إدخال عنصر واحد على الأقل في الأشكال والتركيزات والاستخدامات والتحذيرات."
+      );
+      return;
+    }
+
+    setCustomMedicines((previous) => [...previous, newMedicine]);
+    setForm(emptyForm);
+    setFormSuccess("تمت إضافة الدواء بنجاح.");
+    setSearch("");
+    setSelected(newMedicine);
+    setShowAddForm(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function renderMedicineList(items: Medicine[]) {
+    return items.map((medicine) => (
+      <article className="med-result" key={medicine.id}>
+        <div className="med-pill-icon">
+          <Pill size={21} />
+        </div>
+
+        <div className="med-result-info">
+          <strong>{medicine.name}</strong>
+          <small>
+            {medicine.english} · {medicine.category}
+          </small>
+        </div>
+
+        <button
+          className="med-open"
+          onClick={() => openMedicine(medicine)}
+        >
+          <span>التفاصيل</span>
+          <ChevronLeft size={16} />
+        </button>
+      </article>
+    ));
   }
 
   return (
@@ -203,7 +377,7 @@ export default function App() {
           font-family: Arial, Tahoma, sans-serif;
         }
 
-        button, input { font: inherit; }
+        button, input, textarea { font: inherit; }
         button { cursor: pointer; }
 
         .medicine-app {
@@ -627,6 +801,108 @@ export default function App() {
 
         .med-hidden-input { display: none; }
 
+        .med-add-button {
+          width: 100%;
+          border: 0;
+          border-radius: 12px;
+          padding: 15px;
+          background: #0878b4;
+          color: white;
+          font-weight: bold;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 9px;
+        }
+
+        .med-add-button:active { background: #075b9b; }
+
+        .med-form-field { margin-bottom: 13px; }
+
+        .med-form-field label {
+          display: block;
+          font-weight: bold;
+          font-size: 13px;
+          margin-bottom: 7px;
+        }
+
+        .med-form-field input,
+        .med-form-field textarea {
+          width: 100%;
+          border: 1px solid #dce5ef;
+          background: #fafcff;
+          border-radius: 10px;
+          padding: 12px;
+          outline: none;
+          color: #172b45;
+          font-size: 14px;
+        }
+
+        .med-form-field textarea {
+          min-height: 75px;
+          resize: vertical;
+          line-height: 1.8;
+        }
+
+        .med-form-field input:focus,
+        .med-form-field textarea:focus {
+          border-color: #1684bd;
+          box-shadow: 0 0 0 3px rgba(22,132,189,.08);
+        }
+
+        .med-form-hint {
+          color: #7b899b;
+          font-size: 12px;
+          line-height: 1.7;
+          margin-top: 5px;
+        }
+
+        .med-form-error {
+          background: #fff1ef;
+          color: #a43b32;
+          border: 1px solid #f2d2ce;
+          border-radius: 10px;
+          padding: 12px;
+          font-size: 13px;
+          line-height: 1.8;
+          margin-bottom: 12px;
+        }
+
+        .med-form-success {
+          background: #eaf8ef;
+          color: #236b3b;
+          border: 1px solid #ccebd5;
+          border-radius: 10px;
+          padding: 12px;
+          font-size: 13px;
+          margin-bottom: 12px;
+        }
+
+        .med-save-button {
+          width: 100%;
+          border: 0;
+          border-radius: 11px;
+          padding: 15px;
+          margin-top: 8px;
+          color: white;
+          background: #0878b4;
+          font-weight: bold;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .med-cancel-button {
+          width: 100%;
+          border: 1px solid #dce5ef;
+          border-radius: 11px;
+          padding: 13px;
+          margin-top: 9px;
+          color: #52647a;
+          background: white;
+        }
+
         @media(max-width:520px) {
           .med-fields {
             grid-template-columns: 1fr;
@@ -783,28 +1059,7 @@ export default function App() {
                 </span>
               </div>
 
-              {scanMatches.map((medicine) => (
-                <article className="med-result" key={medicine.id}>
-                  <div className="med-pill-icon">
-                    <Pill size={21} />
-                  </div>
-
-                  <div className="med-result-info">
-                    <strong>{medicine.name}</strong>
-                    <small>
-                      {medicine.english} · {medicine.category}
-                    </small>
-                  </div>
-
-                  <button
-                    className="med-open"
-                    onClick={() => openMedicine(medicine)}
-                  >
-                    <span>التفاصيل</span>
-                    <ChevronLeft size={16} />
-                  </button>
-                </article>
-              ))}
+              {renderMedicineList(scanMatches)}
             </div>
           )}
 
@@ -895,6 +1150,165 @@ export default function App() {
             <RotateCcw size={15} />
             مسح البيانات
           </button>
+        </section>
+
+        <section className="med-panel">
+          <h2>
+            <PlusCircle
+              size={20}
+              style={{ verticalAlign: "middle", marginLeft: 7 }}
+            />
+            إدارة قاعدة الأدوية
+          </h2>
+
+          <p className="med-subtitle">
+            أضف دواءً جديداً إلى قاعدة البيانات المحلية المحفوظة على هذا الجهاز.
+          </p>
+
+          <button
+            className="med-add-button"
+            onClick={() => {
+              setShowAddForm((previous) => !previous);
+              setSelected(null);
+              setFormError("");
+              setFormSuccess("");
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+          >
+            {showAddForm ? <X size={19} /> : <PlusCircle size={19} />}
+            {showAddForm ? "إغلاق نموذج الإضافة" : "إضافة دواء جديد"}
+          </button>
+
+          {formSuccess && (
+            <div className="med-form-success" style={{ marginTop: 12 }}>
+              {formSuccess}
+            </div>
+          )}
+
+          {showAddForm && (
+            <div style={{ marginTop: 18 }}>
+              <div className="med-form-field">
+                <label>اسم الدواء بالعربية *</label>
+                <input
+                  value={form.name}
+                  onChange={(e) => updateForm("name", e.target.value)}
+                  placeholder="مثال: باراسيتامول"
+                />
+              </div>
+
+              <div className="med-form-field">
+                <label>اسم الدواء بالإنجليزية *</label>
+                <input
+                  value={form.english}
+                  onChange={(e) => updateForm("english", e.target.value)}
+                  placeholder="Example: Paracetamol"
+                  dir="ltr"
+                />
+              </div>
+
+              <div className="med-form-field">
+                <label>التصنيف الدوائي *</label>
+                <input
+                  value={form.category}
+                  onChange={(e) => updateForm("category", e.target.value)}
+                  placeholder="مثال: مسكن وخافض حرارة"
+                />
+              </div>
+
+              <div className="med-form-field">
+                <label>المادة الفعالة *</label>
+                <input
+                  value={form.activeIngredient}
+                  onChange={(e) => updateForm("activeIngredient", e.target.value)}
+                  placeholder="مثال: Paracetamol"
+                  dir="auto"
+                />
+              </div>
+
+              <div className="med-form-field">
+                <label>الأشكال الدوائية *</label>
+                <textarea
+                  value={form.forms}
+                  onChange={(e) => updateForm("forms", e.target.value)}
+                  placeholder={"اكتب كل شكل في سطر أو افصل بينها بفاصلة\nأقراص\nشراب\nتحاميل"}
+                />
+                <p className="med-form-hint">
+                  يمكنك إدخال أكثر من شكل، وافصل بينها بفاصلة أو سطر جديد.
+                </p>
+              </div>
+
+              <div className="med-form-field">
+                <label>التركيزات المتوفرة *</label>
+                <textarea
+                  value={form.strengths}
+                  onChange={(e) => updateForm("strengths", e.target.value)}
+                  placeholder={"500 mg\n250 mg\n120 mg/5 mL"}
+                />
+              </div>
+
+              <div className="med-form-field">
+                <label>الاستخدامات الطبية *</label>
+                <textarea
+                  value={form.uses}
+                  onChange={(e) => updateForm("uses", e.target.value)}
+                  placeholder="اكتب الاستخدامات الطبية المعروفة والموثوقة"
+                />
+              </div>
+
+              <div className="med-form-field">
+                <label>التحذيرات والاحتياطات *</label>
+                <textarea
+                  value={form.warnings}
+                  onChange={(e) => updateForm("warnings", e.target.value)}
+                  placeholder="اكتب التحذيرات والاحتياطات المهمة"
+                />
+              </div>
+
+              <div className="med-form-field">
+                <label>معلومات العمر *</label>
+                <textarea
+                  value={form.ageInfo}
+                  onChange={(e) => updateForm("ageInfo", e.target.value)}
+                  placeholder="اكتب المعلومات المتعلقة بالعمر والفئات التي تحتاج إلى احتياط"
+                />
+              </div>
+
+              <div className="med-form-field">
+                <label>ملاحظات الاستعمال *</label>
+                <textarea
+                  value={form.usageNotes}
+                  onChange={(e) => updateForm("usageNotes", e.target.value)}
+                  placeholder="ملاحظات مهمة حول طريقة الاستعمال والتداخلات"
+                />
+              </div>
+
+              {formError && (
+                <div className="med-form-error">
+                  <AlertTriangle
+                    size={16}
+                    style={{ verticalAlign: "middle", marginLeft: 5 }}
+                  />
+                  {formError}
+                </div>
+              )}
+
+              <button className="med-save-button" onClick={addMedicine}>
+                <Save size={19} />
+                حفظ الدواء في قاعدة البيانات
+              </button>
+
+              <button
+                className="med-cancel-button"
+                onClick={() => {
+                  setShowAddForm(false);
+                  setForm(emptyForm);
+                  setFormError("");
+                }}
+              >
+                إلغاء
+              </button>
+            </div>
+          )}
         </section>
 
         {selected ? (
@@ -1017,7 +1431,7 @@ export default function App() {
             <div className="med-warning">
               <AlertTriangle size={20} />
               <span>
-                التركيزات المعروضة أمثلة شائعة وليست قائمة كاملة.
+                التركيزات المعروضة أمثلة وليست قائمة كاملة.
                 يجب التحقق من المادة الفعالة والتركيز والشكل الدوائي
                 على العبوة والنشرة. لا يمكن تحديد جرعة آمنة من هذه
                 المعلومات وحدها؛ ويجب مراعاة العمر والوزن والتشخيص
@@ -1025,7 +1439,7 @@ export default function App() {
               </span>
             </div>
           </section>
-        ) : search.trim() ? (
+        ) : search.trim() && !showAddForm ? (
           <section className="med-panel">
             <div className="med-result-title">
               <h2>نتائج البحث</h2>
@@ -1035,28 +1449,7 @@ export default function App() {
             </div>
 
             {results.length > 0 ? (
-              results.map((medicine) => (
-                <article className="med-result" key={medicine.id}>
-                  <div className="med-pill-icon">
-                    <Pill size={21} />
-                  </div>
-
-                  <div className="med-result-info">
-                    <strong>{medicine.name}</strong>
-                    <small>
-                      {medicine.english} · {medicine.category}
-                    </small>
-                  </div>
-
-                  <button
-                    className="med-open"
-                    onClick={() => openMedicine(medicine)}
-                  >
-                    <span>التفاصيل</span>
-                    <ChevronLeft size={16} />
-                  </button>
-                </article>
-              ))
+              renderMedicineList(results)
             ) : (
               <div className="med-empty">
                 <Search size={30} />
@@ -1065,13 +1458,13 @@ export default function App() {
                 </p>
                 <small>
                   {online
-                    ? "يمكن إضافة مصادر دوائية عبر الإنترنت في مرحلة لاحقة."
-                    : "اتصل بالإنترنت أو أضف الدواء إلى قاعدة البيانات المحلية عند توفر معلومات موثوقة."}
+                    ? "يمكن إضافة الدواء بعد التحقق من معلوماته من مصدر موثوق."
+                    : "يمكنك إضافته إلى قاعدة البيانات المحلية بعد التحقق من معلوماته."}
                 </small>
               </div>
             )}
           </section>
-        ) : (
+        ) : !showAddForm ? (
           <section className="med-panel">
             <div className="med-empty">
               <BookOpen size={35} />
@@ -1081,16 +1474,16 @@ export default function App() {
               </p>
             </div>
           </section>
-        )}
+        ) : null}
 
         <section className="med-note" style={{ marginBottom: 15 }}>
           <ShieldCheck
             size={19}
             style={{ verticalAlign: "middle", marginLeft: 7 }}
           />
-          المعلومات المعروضة إرشادية. هذه النسخة تحتوي على قاعدة
-          أولية محدودة، ولا يجوز الاعتماد على التعرف بالصورة وحده
-          لتحديد دواء أو جرعته.
+          المعلومات المعروضة إرشادية. يجب مراجعة المعلومات الدوائية
+          والتحقق منها من مصادر موثوقة قبل إضافتها أو استخدامها.
+          لا يجوز الاعتماد على التعرف بالصورة وحده لتحديد دواء أو جرعته.
         </section>
 
         <section className="med-panel">
@@ -1107,7 +1500,14 @@ export default function App() {
                 color: "#77869a",
                 fontSize: 13
               }}>
-                عدد الأدوية المسجلة: {medicines.length}
+                عدد الأدوية المسجلة: {allMedicines.length}
+              </p>
+              <p style={{
+                margin: "5px 0 0",
+                color: "#77869a",
+                fontSize: 13
+              }}>
+                الأدوية المضافة من المستخدم: {customMedicines.length}
               </p>
             </div>
           </div>
