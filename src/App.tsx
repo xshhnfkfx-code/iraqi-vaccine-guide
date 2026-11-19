@@ -481,6 +481,44 @@ export default function App() {
 
             
   function renderGlobalList(items: GlobalMedicineResult[]) {
+  return items.map((medicine) => (
+    <article className="med-result" key={medicine.rxcui}>
+      <div className="med-pill-icon global-icon">
+        <Globe size={21} />
+      </div>
+
+      <div className="med-result-info">
+        <strong>{medicine.arabicName || medicine.name}</strong>
+
+        {medicine.arabicName && (
+          <small dir="ltr">{medicine.name}</small>
+        )}
+
+        <small>
+          {medicine.synonym || "لا يوجد اسم بديل مسجل"}
+        </small>
+
+        {medicine.arabicUses && medicine.arabicUses.length > 0 && (
+          <small>
+            **الاستخدامات الطبية:** {medicine.arabicUses.join("، ")}
+          </small>
+        )}
+
+        <small className="source-global">
+          نتيجة عالمية · {medicine.type || "RxNorm"}
+        </small>
+      </div>
+
+      <button
+        className="med-open"
+        onClick={() => openGlobalMedicine(medicine)}
+      >
+        <span>التفاصيل</span>
+        <ChevronLeft size={16} />
+      </button>
+    </article>
+  ));
+  }
     return items.map((medicine) => (
       <article className="med-result" key={medicine.rxcui}>
         <div className="med-pill-icon global-icon">
