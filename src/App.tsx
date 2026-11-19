@@ -479,15 +479,7 @@ export default function App() {
         
 
 
-{selectedGlobal.arabicUses &&
-selectedGlobal.arabicUses.length > 0 ? (
-  renderExtraList(
-    "الاستخدامات الطبية بالعربية",
-    selectedGlobal.arabicUses,
-    <Stethoscope size={18} />
-  )
-) : (
-              <div className="med-detail-section">
+            <div className="med-detail-section">
               <h3><Info size={18} /> الاسم البديل</h3>
               <p className="med-detail-text">
                 {selectedGlobal.synonym || "لا توجد معلومات عن اسم بديل في النتيجة."}
@@ -518,12 +510,6 @@ selectedGlobal.arabicUses.length > 0 ? (
                 {selectedGlobal.type || "غير محدد"}
               </p>
             </div>
-      <Stethoscope size={18} /> الاستخدامات الطبية بالعربية
-    </h3>
-    <p className="med-detail-text">
-      لم تتوفر استخدامات عربية موثوقة لهذه النتيجة في قاعدة المعلومات الحالية.
-    </p>
-  </div>
 )}
 
 
