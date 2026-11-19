@@ -1757,7 +1757,148 @@ export default function App() {
               </ul>
             </div>
 
-            {renderExtraList(
-              "الآثار الجانبية",
-              selected.sideEffects,
-              <Ale
+            
+{renderExtraList(
+  "الآثار الجانبية",
+  selected.sideEffects,
+  <AlertTriangle size={18} />
+)}
+
+{renderExtraList(
+  "موانع الاستعمال",
+  selected.contraindications,
+  <Info size={18} />
+)}
+
+{renderExtraList(
+  "التداخلات الدوائية",
+  selected.interactions,
+  <FlaskConical size={18} />
+)}
+
+{renderExtraList(
+  "الاحتياطات الإضافية",
+  selected.precautions,
+  <AlertTriangle size={18} />
+)}
+
+{renderExtraText(
+  "معلومات العمر",
+  selected.ageInfo,
+  <Activity size={18} />
+)}
+
+{renderExtraText(
+  "ملاحظات الاستعمال",
+  selected.usageNotes,
+  <BookOpen size={18} />
+)}
+
+{renderExtraText(
+  "معلومات الحمل",
+  selected.pregnancyInfo,
+  <Info size={18} />
+)}
+
+{renderExtraText(
+  "معلومات الرضاعة الطبيعية",
+  selected.breastfeedingInfo,
+  <Info size={18} />
+)}
+
+{renderExtraText(
+  "ظروف التخزين",
+  selected.storageInfo,
+  <Package size={18} />
+)}
+
+{renderExtraText(
+  "معلومات الجرعة الزائدة",
+  selected.overdoseInfo,
+  <AlertTriangle size={18} />
+)}
+
+{renderExtraList(
+  "المراجع الطبية",
+  selected.medicalReferences,
+  <BookOpen size={18} />
+)}
+
+<div className="med-warning">
+  <AlertTriangle size={20} />
+  <span>
+    المعلومات الواردة في هذا التطبيق للتثقيف والتعريف بالأدوية فقط،
+    ولا تغني عن النشرة الرسمية أو استشارة الطبيب أو الصيدلي.
+    لا تعتمد على التطبيق وحده لاتخاذ قرارات علاجية أو تحديد الجرعات.
+  </span>
+</div>
+</section>
+) : null}
+
+{!selected && !selectedGlobal && search.trim() && (
+  <section className="med-panel">
+    <div className="med-result-title">
+      <h2>نتائج البحث المحلي</h2>
+      <span className="med-count">{results.length} نتيجة</span>
+    </div>
+
+    {results.length > 0 ? (
+      renderMedicineList(results)
+    ) : (
+      <div className="med-empty">
+        <Search size={30} />
+        <p>لا توجد نتائج مطابقة في قاعدة الأدوية المحلية.</p>
+        <p>يمكنك تجربة البحث العالمي.</p>
+      </div>
+    )}
+  </section>
+)}
+
+{globalSearched && !selectedGlobal && (
+  <section className="med-panel">
+    <div className="med-result-title">
+      <h2>نتائج البحث العالمي</h2>
+      <span className="med-count">{globalResults.length} نتيجة</span>
+    </div>
+
+    {globalLoading ? (
+      <div className="med-loading">
+        <Loader2 size={20} />
+        جارٍ تحميل النتائج...
+      </div>
+    ) : globalResults.length > 0 ? (
+      renderGlobalList(globalResults)
+    ) : (
+      <div className="med-empty">
+        <Globe size={30} />
+        <p>لا توجد نتائج عالمية لعرضها.</p>
+      </div>
+    )}
+
+    {globalError && (
+      <div className="med-status error">
+        <AlertTriangle size={17} />
+        {" "}{globalError}
+      </div>
+    )}
+
+    <p className="med-form-hint">
+      مصدر البحث العالمي هو RxNorm التابع للمكتبة الوطنية الأمريكية للطب.
+      قد تكون النتائج باللغة الإنجليزية، ولا تمثل نشرة دوائية كاملة.
+    </p>
+  </section>
+)}
+
+<footer className="med-footer">
+  <p>
+    الموسوعة الدوائية العالمية – World Drug Encyclopedia
+  </p>
+  <p>
+    المعلومات للتثقيف الدوائي فقط، ويجب مراجعة المصادر الطبية الرسمية.
+  </p>
+</footer>
+</main>
+</div>
+);
+}
+
