@@ -32,7 +32,17 @@ const emptyForm = {
   uses: "",
   warnings: "",
   ageInfo: "",
-  usageNotes: ""
+  usageNotes: "",
+  brandNames: "",
+  sideEffects: "",
+  contraindications: "",
+  interactions: "",
+  precautions: "",
+  pregnancyInfo: "",
+  breastfeedingInfo: "",
+  storageInfo: "",
+  overdoseInfo: "",
+  medicalReferences: ""
 };
 
 export default function App() {
@@ -138,7 +148,12 @@ export default function App() {
         ...(medicine.sideEffects || []),
         ...(medicine.contraindications || []),
         ...(medicine.interactions || []),
-        ...(medicine.precautions || [])
+        ...(medicine.precautions || []),
+        ...(medicine.medicalReferences || []),
+        medicine.pregnancyInfo || "",
+        medicine.breastfeedingInfo || "",
+        medicine.storageInfo || "",
+        medicine.overdoseInfo || ""
       ].join(" ");
 
       return normalize(searchableText).includes(query);
@@ -365,7 +380,7 @@ export default function App() {
       !form.ageInfo.trim() ||
       !form.usageNotes.trim()
     ) {
-      setFormError("يرجى إكمال جميع المعلومات قبل حفظ الدواء.");
+      setFormError("يرجى إكمال جميع المعلومات الأساسية قبل حفظ الدواء.");
       return;
     }
 
@@ -404,7 +419,18 @@ export default function App() {
       uses: splitItems(form.uses),
       warnings: splitItems(form.warnings),
       ageInfo: form.ageInfo.trim(),
-      usageNotes: form.usageNotes.trim()
+      usageNotes: form.usageNotes.trim(),
+
+      brandNames: splitItems(form.brandNames),
+      sideEffects: splitItems(form.sideEffects),
+      contraindications: splitItems(form.contraindications),
+      interactions: splitItems(form.interactions),
+      precautions: splitItems(form.precautions),
+      pregnancyInfo: form.pregnancyInfo.trim() || undefined,
+      breastfeedingInfo: form.breastfeedingInfo.trim() || undefined,
+      storageInfo: form.storageInfo.trim() || undefined,
+      overdoseInfo: form.overdoseInfo.trim() || undefined,
+      medicalReferences: splitItems(form.medicalReferences)
     };
 
     if (
@@ -483,8 +509,6 @@ export default function App() {
     ));
   }
 
-  // عرض قائمة اختيارية من المعلومات الدوائية الموسعة.
-  // لا يظهر القسم إذا لم تتوفر له بيانات.
   function renderExtraList(
     title: string,
     items: string[] | undefined,
@@ -504,7 +528,6 @@ export default function App() {
     );
   }
 
-  // عرض معلومة نصية اختيارية.
   function renderExtraText(
     title: string,
     value: string | undefined,
@@ -1011,6 +1034,14 @@ export default function App() {
           margin-bottom: 12px;
         }
 
+        .med-form-section-title {
+          border-top: 1px solid #edf1f5;
+          padding-top: 17px;
+          margin: 22px 0 7px;
+          font-size: 16px;
+          color: #0878b4;
+        }
+
         .med-save-button { margin-top: 8px; }
 
         .med-cancel-button {
@@ -1444,8 +1475,113 @@ export default function App() {
                 <textarea
                   value={form.usageNotes}
                   onChange={(e) => updateForm("usageNotes", e.target.value)}
-                  placeholder="ملاحظات مهمة حول طريقة الاستعمال والتداخلات"
+                  placeholder="ملاحظات مهمة حول طريقة الاستعمال"
                 />
+              </div>
+
+              <h3 className="med-form-section-title">
+                المعلومات الطبية الإضافية
+              </h3>
+
+              <p className="med-form-hint" style={{ marginBottom: 15 }}>
+                جميع الحقول التالية اختيارية. أدخل المعلومات من نشرة الدواء
+                الرسمية أو من مصدر طبي موثوق. يمكن ترك أي حقل فارغاً.
+              </p>
+
+              <div className="med-form-field">
+                <label>الأسماء التجارية</label>
+                <textarea
+                  value={form.brandNames}
+                  onChange={(e) => updateForm("brandNames", e.target.value)}
+                  placeholder={"اسم تجاري أول\nاسم تجاري آخر"}
+                />
+                <p className="med-form-hint">
+                  افصل الأسماء بفاصلة أو سطر جديد. قد تختلف الأسماء حسب البلد.
+                </p>
+              </div>
+
+              <div className="med-form-field">
+                <label>الآثار الجانبية</label>
+                <textarea
+                  value={form.sideEffects}
+                  onChange={(e) => updateForm("sideEffects", e.target.value)}
+                  placeholder="أدخل الآثار الجانبية المذكورة في النشرة الرسمية"
+                />
+              </div>
+
+              <div className="med-form-field">
+                <label>موانع الاستعمال</label>
+                <textarea
+                  value={form.contraindications}
+                  onChange={(e) => updateForm("contraindications", e.target.value)}
+                  placeholder="أدخل موانع الاستعمال الموثقة"
+                />
+              </div>
+
+              <div className="med-form-field">
+                <label>التداخلات الدوائية</label>
+                <textarea
+                  value={form.interactions}
+                  onChange={(e) => updateForm("interactions", e.target.value)}
+                  placeholder="أدخل التداخلات الدوائية المعروفة والموثقة"
+                />
+              </div>
+
+              <div className="med-form-field">
+                <label>الاحتياطات الإضافية</label>
+                <textarea
+                  value={form.precautions}
+                  onChange={(e) => updateForm("precautions", e.target.value)}
+                  placeholder="أدخل الاحتياطات الإضافية من مصدر موثوق"
+                />
+              </div>
+
+              <div className="med-form-field">
+                <label>معلومات الحمل</label>
+                <textarea
+                  value={form.pregnancyInfo}
+                  onChange={(e) => updateForm("pregnancyInfo", e.target.value)}
+                  placeholder="معلومات الحمل كما وردت في النشرة الرسمية"
+                />
+              </div>
+
+              <div className="med-form-field">
+                <label>معلومات الرضاعة الطبيعية</label>
+                <textarea
+                  value={form.breastfeedingInfo}
+                  onChange={(e) => updateForm("breastfeedingInfo", e.target.value)}
+                  placeholder="معلومات الرضاعة الطبيعية من مصدر موثوق"
+                />
+              </div>
+
+              <div className="med-form-field">
+                <label>ظروف التخزين</label>
+                <textarea
+                  value={form.storageInfo}
+                  onChange={(e) => updateForm("storageInfo", e.target.value)}
+                  placeholder="شروط الحفظ والتخزين حسب نشرة المنتج"
+                />
+              </div>
+
+              <div className="med-form-field">
+                <label>معلومات الجرعة الزائدة</label>
+                <textarea
+                  value={form.overdoseInfo}
+                  onChange={(e) => updateForm("overdoseInfo", e.target.value)}
+                  placeholder="علامات الجرعة الزائدة والتصرف الموصى به وفق النشرة الرسمية"
+                />
+              </div>
+
+              <div className="med-form-field">
+                <label>المراجع الطبية</label>
+                <textarea
+                  value={form.medicalReferences}
+                  onChange={(e) => updateForm("medicalReferences", e.target.value)}
+                  placeholder={"اسم المرجع أو النشرة الرسمية\nرابط المصدر إن وجد"}
+                />
+                <p className="med-form-hint">
+                  يمكن إدخال أكثر من مرجع، كل مرجع في سطر مستقل.
+                </p>
               </div>
 
               {formError && (
@@ -1626,7 +1762,7 @@ export default function App() {
             {renderExtraList(
               "الاحتياطات الإضافية",
               selected.precautions,
-              <ShieldCheckIcon />
+              <Info size={18} />
             )}
 
             <div className="med-detail-section">
@@ -1780,9 +1916,3 @@ export default function App() {
     </div>
   );
 }
-
-// أيقونة احتياطات إضافية
-function ShieldCheckIcon() {
-  return <Info size={18} />;
-}
-
