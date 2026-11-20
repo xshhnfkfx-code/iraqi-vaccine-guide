@@ -1853,3 +1853,7 @@ function renderGlobalList(items: GlobalMedicineResult[]) {
     </div>
   </section>
 ) : null}
+      </main>
+    </div>
+  );
+}
