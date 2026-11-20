@@ -1439,8 +1439,33 @@ function renderGlobalList(items: GlobalMedicineResult[]) {
               </div>
             )}
           </section>
+{catalogResults.length > 0 && (
+  <section className="med-panel">
+    <div className="med-result-title">
+      <h2>فهرس الأدوية العراقية</h2>
+      <span className="med-count">
+        {catalogResults.length} نتيجة
+      </span>
+    </div>
 
-          {globalSearched && (
+    {catalogResults.map((drug) => (
+      <article className="med-result" key={`iraq-${drug.id}`}>
+        <div className="med-pill-icon">
+          <BookOpen size={21} />
+        </div>
+
+        <div className="med-result-info">
+          <strong>{drug.arabicName}</strong>
+          <small dir="ltr">{drug.name}</small>
+          <small>فهرس دليل الأدوية العراقي · صفحة {drug.page}</small>
+          <small className="source-local">
+            الاسم مسجل في الفهرس — التفاصيل العلاجية غير متاحة هنا
+          </small>
+        </div>
+      </article>
+    ))}
+  </section>
+)}          {globalSearched && (
             <section className="med-panel">
               <div className="med-result-title">
                 <h2>نتائج البحث العالمي</h2>
