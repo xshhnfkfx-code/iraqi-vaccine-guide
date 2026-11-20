@@ -324,5 +324,9 @@ export const iraqDrugCatalog: IraqDrugCatalogItem[] = [
     { id: 294, name: "Infliximab", arabicName: "إنفليكسيماب", page: 331 },
     { id: 295, name: "Influenza vaccine", arabicName: "لقاح الإنفلونزا", page: 332 },
     { id: 296, name: "Interferon", arabicName: "إنترفيرون", page: 335 },
-    { id: 297, name: "Iohexol", arabicName: "إيوهيكسول", page: 336 },
+    { id: 297, name: "Iohexol", arabicName: "إيوهيكسول", page: 336 },    { id: 298, name: "Iopamidol", arabicName: "إيوباميدول", page: 337 },
+    { id: 299, name: "Ipratropium", arabicName: "إبراتروبيوم", page: 338 },
+    { id: 300, name: "Irbesartan", arabicName: "إربيسارتان", page: 339 },
+    { id: 301, name: "Irinotecan", arabicName: "إيرينوتيكان", page: 340 },
+    { id: 302, name: "Iron", arabicName: "الحديد", page: 341 },
 ];
