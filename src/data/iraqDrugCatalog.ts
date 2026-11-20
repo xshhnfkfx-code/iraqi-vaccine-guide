@@ -515,6 +515,6 @@ export const iraqDrugCatalog: IraqDrugCatalogItem[] = [
       { id: 471, name: "Propranolol", arabicName: "بروبرانولول", page: 521 },
       { id: 472, name: "Propylthiouracil", arabicName: "بروبيل ثيوراسيل", page: 522 },
       { id: 473, name: "Proximadiol", arabicName: "بروكسيماديول", page: 523 },
-      { id: 474, name: "Pyridoxine", arabicName: "بيريدوكسين", page: 524 },
+      { id: 474, name: "Pyridoxine", arabicName: "بيريدوكسين", page: 524 },{ id: 475, name: "Quetiapine", arabicName: "كويتيابين", page: 525 },
 ];
 
