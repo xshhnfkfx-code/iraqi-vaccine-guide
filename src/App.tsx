@@ -1413,6 +1413,53 @@ function renderGlobalList(items: GlobalMedicineResult[]) {
             مسح البيانات
           </button>
         </section>
+        
+      {search.trim() && !selected && !selectedGlobal && (
+        <>
+          <section className="med-panel">
+            <div className="med-result-title">
+              <h2>نتائج البحث المحلي</h2>
+              <span className="med-count">{results.length} نتيجة</span>
+            </div>
+
+            {results.length > 0 ? (
+              renderMedicineList(results)
+            ) : (
+              <div className="med-empty">
+                <Pill size={30} />
+                <p>لا توجد نتائج مطابقة في قاعدة الأدوية المحلية.</p>
+              </div>
+            )}
+          </section>
+
+          {globalSearched && (
+            <section className="med-panel">
+              <div className="med-result-title">
+                <h2>نتائج البحث العالمي</h2>
+                <span className="med-count">{globalResults.length} نتيجة</span>
+              </div>
+
+              {globalLoading ? (
+                <div className="med-loading">
+                  <Loader2 size={22} />
+                  جارٍ تحميل النتائج العالمية...
+                </div>
+              ) : globalResults.length > 0 ? (
+                renderGlobalList(globalResults)
+              ) : (
+                <div className="med-empty">
+                  <Globe size={30} />
+                  <p>{globalError || "لا توجد نتائج عالمية لهذا البحث."}</p>
+                </div>
+              )}
+
+              {globalError && globalResults.length > 0 && (
+                <div className="med-status">{globalError}</div>
+              )}
+            </section>
+          )}
+        </>
+      )}
 
         <section className="med-panel">
           <h2>
