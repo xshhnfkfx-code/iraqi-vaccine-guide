@@ -444,6 +444,17 @@ export const iraqDrugCatalog: IraqDrugCatalogItem[] = [
       { id: 408, name: "Norethisterone", arabicName: "نوريثيستيرون", page: 448 },
       { id: 409, name: "Norfloxacin", arabicName: "نورفلوكساسين", page: 449 },
       { id: 410, name: "Nusinersen", arabicName: "نوسينيرسين", page: 450 },
-      { id: 411, name: "Nystatine", arabicName: "نيستاتين", page: 451 },
+      { id: 411, name: "Nystatine", arabicName: "نيستاتين", page: 451 },      { id: 412, name: "Obeticholic acid", arabicName: "حمض أوبيتيكوليك", page: 452 },
+      { id: 413, name: "Octreotide", arabicName: "أوكتريوتايد", page: 453 },
+      { id: 414, name: "Ofloxacin", arabicName: "أوفلوكساسين", page: 454 },
+      { id: 415, name: "Olanzapine", arabicName: "أولانزابين", page: 455 },
+      { id: 416, name: "Olmesartan", arabicName: "أولميسارتان", page: 456 },
+      { id: 417, name: "Omeprazole", arabicName: "أوميبرازول", page: 457 },
+      { id: 418, name: "Ondansetron", arabicName: "أوندانسيترون", page: 458 },
+      { id: 419, name: "Oseltamivir", arabicName: "أوسيلتاميفير", page: 459 },
+      { id: 420, name: "Oxaliplatin", arabicName: "أوكساليبلاتين", page: 460 },
+      { id: 421, name: "Oxcarbazepine", arabicName: "أوكسكاربازيبين", page: 461 },
+      { id: 422, name: "Oxybutynin", arabicName: "أوكسيبيوتينين", page: 462 },
+      { id: 423, name: "Oxytocin", arabicName: "أوكسيتوسين", page: 463 },
 ];
 
