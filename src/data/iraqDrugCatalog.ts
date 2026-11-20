@@ -320,6 +320,10 @@ export const iraqDrugCatalog: IraqDrugCatalogItem[] = [
     { id: 320, name: "Itraconazole", arabicName: "إيتراكونازول", page: 348 },
     { id: 321, name: "Ivabradine", arabicName: "إيفابرادين", page: 349 },
     { id: 322, name: "Ivermectin", arabicName: "إيفرمكتين", page: 350 },
-    { id: 323, name: "Ivy leaves dry extract", arabicName: "مستخلص أوراق اللبلاب الجاف", page: 351 },  
+    { id: 323, name: "Ivy leaves dry extract", arabicName: "مستخلص أوراق اللبلاب الجاف", page: 351 },{ id: 324, name: "Ketamine", arabicName: "كيتامين", page: 352 },
+      { id: 325, name: "Ketoconazole", arabicName: "كيتوكونازول", page: 353 },
+      { id: 326, name: "Ketoprofen", arabicName: "كيتوبروفين", page: 354 },
+      { id: 327, name: "Ketorolac", arabicName: "كيتورولاك", page: 355 },
+      { id: 328, name: "Ketotifen", arabicName: "كيتوتيفين", page: 356 },
 ];
 
