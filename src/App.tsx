@@ -1822,8 +1822,16 @@ function renderGlobalList(items: GlobalMedicineResult[]) {
       </span>
     </div>
   </section>
+
 ) : selected ? (
   <section className="med-panel">
+
+    {renderExtraList(
+      "الاستخدامات العلاجية",
+      selected.uses,
+      <Stethoscope size={18} />
+    )}
+
     {renderExtraList(
       "الآثار الجانبية",
       selected.sideEffects,
@@ -1899,7 +1907,7 @@ function renderGlobalList(items: GlobalMedicineResult[]) {
       </span>
     </div>
   </section>
-) : null}
+) : null
       </main>
     </div>
   );
