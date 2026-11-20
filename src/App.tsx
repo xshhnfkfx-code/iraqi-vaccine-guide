@@ -1672,7 +1672,7 @@ function renderGlobalList(items: GlobalMedicineResult[]) {
           )}
         </section>
 
-{selectedGlobal ? (
+        {selectedGlobal ? (  
   <section className="med-panel">
     <div className="med-detail-head">
       <div className="med-pill-icon global-icon">
@@ -1724,7 +1724,9 @@ function renderGlobalList(items: GlobalMedicineResult[]) {
     {selectedGlobal.arabicUses &&
     selectedGlobal.arabicUses.length > 0 ? (
       <div className="med-detail-section">
-        <h3><Stethoscope size={18} /> الاستخدامات العلاجية بالعربية</h3>
+        <h3>
+          <Stethoscope size={18} /> الاستخدامات العلاجية بالعربية
+        </h3>
         <ul>
           {selectedGlobal.arabicUses.map((use, index) => (
             <li key={`${selectedGlobal.rxcui}-detail-use-${index}`}>
@@ -1735,7 +1737,9 @@ function renderGlobalList(items: GlobalMedicineResult[]) {
       </div>
     ) : (
       <div className="med-detail-section">
-        <h3><Stethoscope size={18} /> الاستخدامات العلاجية بالعربية</h3>
+        <h3>
+          <Stethoscope size={18} /> الاستخدامات العلاجية بالعربية
+        </h3>
         <p className="med-detail-text">
           لا تتوفر حالياً استخدامات عربية موثوقة لهذه النتيجة.
         </p>
@@ -1771,8 +1775,8 @@ function renderGlobalList(items: GlobalMedicineResult[]) {
       </span>
     </div>
   </section>
-  ) : selected ? (
-  <div>
+) : selected ? (
+  <section className="med-panel">
     {renderExtraList(
       "الآثار الجانبية",
       selected.sideEffects,
@@ -1820,5 +1824,32 @@ function renderGlobalList(items: GlobalMedicineResult[]) {
       selected.breastfeedingInfo,
       <Info size={18} />
     )}
-  </div>
-) : null} 
+
+    {renderExtraText(
+      "ظروف التخزين",
+      selected.storageInfo,
+      <Package size={18} />
+    )}
+
+    {renderExtraText(
+      "معلومات الجرعة الزائدة",
+      selected.overdoseInfo,
+      <AlertTriangle size={18} />
+    )}
+
+    {renderExtraList(
+      "المراجع الطبية",
+      selected.medicalReferences,
+      <BookOpen size={18} />
+    )}
+
+    <div className="med-warning">
+      <AlertTriangle size={20} />
+      <span>
+        المعلومات الواردة في هذا التطبيق للتثقيف والتعريف بالأدوية فقط،
+        ولا تغني عن النشرة الرسمية أو استشارة الطبيب أو الصيدلي.
+        لا تعتمد على التطبيق وحده لاتخاذ قرارات علاجية أو تحديد الجرعات.
+      </span>
+    </div>
+  </section>
+) : null}
