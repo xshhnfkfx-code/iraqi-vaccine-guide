@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 
 import { medicines } from "./data/medicineDatabase";
+import { iraqDrugCatalog } from "./data/iraqDrugCatalog";
 import type { Medicine } from "./data/medicineDatabase";
 import {
   loadCustomMedicines,
@@ -158,7 +159,14 @@ export default function App() {
 
       return normalize(searchableText).includes(query);
     });
-  }, [search, allMedicines]);
+  }, [search, allMedicines]);const catalogResults = useMemo(() => {
+  const query = normalize(search);
+  if (!query) return [];
+
+  return iraqDrugCatalog.filter((drug) =>
+    normalize(`${drug.name} ${drug.arabicName}`).includes(query)
+  );
+}, [search]);
 
   async function runGlobalSearch() {
     const query = search.trim();
