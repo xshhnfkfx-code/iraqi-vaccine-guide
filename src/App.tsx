@@ -1672,7 +1672,6 @@ function renderGlobalList(items: GlobalMedicineResult[]) {
           )}
         </section>
 
-
 {selectedGlobal ? (
   <section className="med-panel">
     <div className="med-detail-head">
