@@ -1906,9 +1906,6 @@ function renderGlobalList(items: GlobalMedicineResult[]) {
         لا تعتمد على التطبيق وحده لاتخاذ قرارات علاجية أو تحديد الجرعات.
       </span>
     </div>
-  </section>
-) : null
+    </section>
+) : null}
       </main>
-    </div>
-  );
-}
