@@ -1672,151 +1672,107 @@ function renderGlobalList(items: GlobalMedicineResult[]) {
           )}
         </section>
 
-        {selectedGlobal ? (
-          <section className="med-panel">
-            <div className="med-detail-head">
-              <div className="med-pill-icon global-icon">
-                <Globe size={24} />
-              </div>
 
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <h2>
-                  {selectedGlobal.arabicName || selectedGlobal.name}
-                </h2>
+{selectedGlobal ? (
+  <section className="med-panel">
+    <div className="med-detail-head">
+      <div className="med-pill-icon global-icon">
+        <Globe size={24} />
+      </div>
 
-                {selectedGlobal.arabicName && (
-                  <p dir="ltr">{selectedGlobal.name}</p>
-                )}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <h2>
+          {selectedGlobal.arabicName || selectedGlobal.name}
+        </h2>
 
-                <p>نتيجة من قاعدة RxNorm العالمية</p>
-              </div>
+        {selectedGlobal.arabicName && (
+          <p dir="ltr">{selectedGlobal.name}</p>
+        )}
 
-              <button
-                onClick={() => setSelectedGlobal(null)}
-                className="med-close"
-                aria-label="إغلاق التفاصيل"
-              >
-                <X size={21} />
-              </button>
-            </div>
+        <p>نتيجة من قاعدة RxNorm العالمية</p>
+      </div>
 
-            <div className="med-detail-section">
-              <h3><Database size={18} /> رقم التعريف العالمي</h3>
-              <p className="med-detail-text" dir="ltr">{selectedGlobal.rxcui}</p>
-            </div>
+      <button
+        onClick={() => setSelectedGlobal(null)}
+        className="med-close"
+        aria-label="إغلاق التفاصيل"
+      >
+        <X size={21} />
+      </button>
+    </div>
 
-            <div className="med-detail-section">
-              <h3><Info size={18} /> الاسم الإنجليزي الأصلي</h3>
-              <p className="med-detail-text" dir="ltr">
-                {selectedGlobal.name}
-              </p>
-            </div>
+    <div className="med-detail-section">
+      <h3><Database size={18} /> رقم التعريف العالمي</h3>
+      <p className="med-detail-text" dir="ltr">
+        {selectedGlobal.rxcui}
+      </p>
+    </div>
 
-            <div className="med-detail-section">
-              <h3><Info size={18} /> الاسم البديل</h3>
-              <p className="med-detail-text">
-                {selectedGlobal.synonym || "لا توجد معلومات عن اسم بديل في النتيجة."}
-              </p>
-            </div>
+    <div className="med-detail-section">
+      <h3><Info size={18} /> الاسم الإنجليزي الأصلي</h3>
+      <p className="med-detail-text" dir="ltr">
+        {selectedGlobal.name}
+      </p>
+    </div>
 
-            <div className="med-detail-section">
-              <h3><Package size={18} /> نوع السجل</h3>
-              <p className="med-detail-text" dir="ltr">
-                {selectedGlobal.type || "غير محدد"}
-              </p>
-            </div>
+    <div className="med-detail-section">
+      <h3><Info size={18} /> الاسم البديل</h3>
+      <p className="med-detail-text">
+        {selectedGlobal.synonym || "لا توجد معلومات عن اسم بديل في النتيجة."}
+      </p>
+    </div>
 
-            <div className="med-detail-section">
-              <h3><Globe size={18} /> مصدر المعلومات</h3>
-              <p className="med-detail-text">{selectedGlobal.source}</p>
-            </div>
+    {selectedGlobal.arabicUses &&
+    selectedGlobal.arabicUses.length > 0 ? (
+      <div className="med-detail-section">
+        <h3><Stethoscope size={18} /> الاستخدامات العلاجية بالعربية</h3>
+        <ul>
+          {selectedGlobal.arabicUses.map((use, index) => (
+            <li key={`${selectedGlobal.rxcui}-detail-use-${index}`}>
+              {use}
+            </li>
+          ))}
+        </ul>
+      </div>
+    ) : (
+      <div className="med-detail-section">
+        <h3><Stethoscope size={18} /> الاستخدامات العلاجية بالعربية</h3>
+        <p className="med-detail-text">
+          لا تتوفر حالياً استخدامات عربية موثوقة لهذه النتيجة.
+        </p>
+      </div>
+    )}
 
-            <div className="med-detail-section">
-              <h3><Activity size={18} /> تاريخ جلب البيانات</h3>
-              <p className="med-detail-text" dir="ltr">
-                {new Date(selectedGlobal.fetchedAt).toLocaleString()}
-              </p>
-            </div>
+    <div className="med-detail-section">
+      <h3><Package size={18} /> نوع السجل</h3>
+      <p className="med-detail-text" dir="ltr">
+        {selectedGlobal.type || "غير محدد"}
+      </p>
+    </div>
 
-            <div className="med-warning">
-              <AlertTriangle size={20} />
-              <span>
-                هذه النتيجة تعريفية من قاعدة RxNorm وليست نشرة دوائية كاملة.
-                لا تتضمن هذه النتيجة وحدها جميع الاستعمالات أو التحذيرات
-                أو الجرعات أو التداخلات. يجب الرجوع إلى النشرة الرسمية
-                والجهات الصحية المختصة قبل اتخاذ أي قرار علاجي.
-              </span>
-            </div>
-          </section>
-        ) : selected ? (
-          <section className="med-panel">
-            <div className="med-detail-head">
-              <div className="med-pill-icon">
-                <Pill size={24} />
-              </div>
+    <div className="med-detail-section">
+      <h3><Globe size={18} /> مصدر المعلومات</h3>
+      <p className="med-detail-text">{selectedGlobal.source}</p>
+    </div>
 
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <h2>{selected.name}</h2>
-                <p>{selected.english} · {selected.category}</p>
-              </div>
+    <div className="med-detail-section">
+      <h3><Activity size={18} /> تاريخ جلب البيانات</h3>
+      <p className="med-detail-text" dir="ltr">
+        {new Date(selectedGlobal.fetchedAt).toLocaleString()}
+      </p>
+    </div>
 
-              <button
-                onClick={() => setSelected(null)}
-                className="med-close"
-                aria-label="إغلاق التفاصيل"
-              >
-                <X size={21} />
-              </button>
-            </div>
-
-            <div className="med-detail-section">
-              <h3><FlaskConical size={18} /> المادة الفعالة</h3>
-              <p className="med-detail-text">{selected.activeIngredient}</p>
-            </div>
-
-            {selected.brandNames && selected.brandNames.length > 0 && (
-              <div className="med-detail-section">
-                <h3><Package size={18} /> الأسماء التجارية</h3>
-                <div className="med-info-list">
-                  {selected.brandNames.map((item, i) => (
-                    <span className="med-info-chip" key={i}>{item}</span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="med-detail-section">
-              <h3><Package size={18} /> الأشكال الدوائية</h3>
-              <div className="med-info-list">
-                {selected.forms.map((item, i) => (
-                  <span className="med-info-chip" key={i}>{item}</span>
-                ))}
-              </div>
-            </div>
-
-            <div className="med-detail-section">
-              <h3><Pill size={18} /> التركيزات الشائعة</h3>
-              <div className="med-info-list">
-                {selected.strengths.map((item, i) => (
-                  <span className="med-info-chip" key={i}>{item}</span>
-                ))}
-              </div>
-            </div>
-
-            <div className="med-detail-section">
-              <h3><Stethoscope size={18} /> الاستخدامات الطبية</h3>
-              <ul>
-                {selected.uses.map((item, i) => <li key={i}>{item}</li>)}
-              </ul>
-            </div>
-
-            <div className="med-detail-section">
-              <h3><AlertTriangle size={18} /> التحذيرات والاحتياطات</h3>
-              <ul>
-                {selected.warnings.map((item, i) => <li key={i}>{item}</li>)}
-              </ul>
-            </div>
-
+    <div className="med-warning">
+      <AlertTriangle size={20} />
+      <span>
+        هذه النتيجة تعريفية من قاعدة RxNorm وليست نشرة دوائية كاملة.
+        لا تتضمن هذه النتيجة وحدها جميع الاستعمالات أو التحذيرات
+        أو الجرعات أو التداخلات. يجب الرجوع إلى النشرة الرسمية
+        والجهات الصحية المختصة قبل اتخاذ أي قرار علاجي.
+      </span>
+    </div>
+  </section>
+) : selected ? (
             
 {renderExtraList(
   "الآثار الجانبية",
