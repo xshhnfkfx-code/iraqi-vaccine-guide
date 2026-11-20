@@ -25,14 +25,29 @@ type RxNormResponse = {
   };
 };
 
-const API_URL = "https://rxnav.nlm.nih.gov/REST/drugs.json";
-const CACHE_KEY = "world-drug-encyclopedia-global-search";
+type ApproximateResponse = {
+  approximateGroup?: {
+    candidate?: Array<{
+      rxcui?: string;
+      name?: string;
+      tty?: string;
+      score?: number;
+    }>;
+  };
+};
+
+type PropertiesResponse = {
+  properties?: RxNormConcept;
+};
 
 type CachedSearch = {
   query: string;
   results: GlobalMedicineResult[];
   savedAt: string;
 };
+
+const API_URL = "https://rxnav.nlm.nih.gov/REST";
+const CACHE_KEY = "world-drug-encyclopedia-global-search";
 
 // الأسماء العربية للمواد الدوائية الشائعة
 const arabicMedicineNames: Record<string, string> = {
@@ -83,8 +98,7 @@ const arabicMedicineNames: Record<string, string> = {
   vitamin: "فيتامين",
 };
 
-// استخدامات طبية عامة لبعض المواد الفعالة المعروفة
-// هذه المعلومات تثقيفية وليست توصية علاجية
+// الاستخدامات العربية لبعض المواد المعروفة
 const arabicMedicineUses: Record<string, string[]> = {
   paracetamol: [
     "تخفيف الألم الخفيف إلى المتوسط",
@@ -166,9 +180,15 @@ const arabicMedicineUses: Record<string, string[]> = {
   ],
 };
 
-// البحث عن اسم المادة الفعالة داخل اسم الدواء
+function normalizeText(value: string): string {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
 function findMedicineKeys(name: string): string[] {
-  const normalized = name.toLowerCase();
+  const normalized = normalizeText(name);
   const matches: string[] = [];
 
   for (const key of Object.keys(arabicMedicineNames)) {
@@ -182,7 +202,6 @@ function findMedicineKeys(name: string): string[] {
   return matches;
 }
 
-// توحيد أسماء المواد التي لها أكثر من اسم
 function normalizeMedicineKey(key: string): string {
   if (key === "paracetamol" || key === "acetaminophen") {
     return "paracetamol";
@@ -199,7 +218,9 @@ function normalizeMedicineKey(key: string): string {
   return key;
 }
 
-function getArabicMedicineName(name: string): string | undefined {
+function getArabicMedicineName(
+  name: string
+): string | undefined {
   const keys = findMedicineKeys(name);
 
   return keys.length > 0
@@ -207,7 +228,9 @@ function getArabicMedicineName(name: string): string | undefined {
     : undefined;
 }
 
-function getArabicMedicineUses(name: string): string[] | undefined {
+function getArabicMedicineUses(
+  name: string
+): string[] | undefined {
   const keys = findMedicineKeys(name);
   const uses: string[] = [];
 
@@ -240,7 +263,6 @@ function enrichMedicine(
   };
 }
 
-// تحديد المواد المطلوبة في البحث
 function getQueryMedicineKeys(query: string): string[] {
   return [
     ...new Set(
@@ -249,24 +271,14 @@ function getQueryMedicineKeys(query: string): string[] {
   ];
 }
 
-// التحقق من أن النتيجة دواء مركب
 function isCombinationMedicine(name: string): boolean {
   const keys = findMedicineKeys(name).map(normalizeMedicineKey);
 
-  // وجود أكثر من مادة فعالة معروفة
-  if (new Set(keys).size > 1) {
-    return true;
-  }
+  if (new Set(keys).size > 1) return true;
 
-  // وجود فاصل يدل غالباً على تركيبة دوائية
-  if (/[+/]/.test(name)) {
-    return true;
-  }
-
-  return false;
+  return /[+/]/.test(name);
 }
 
-// ترتيب النتائج وتفضيل الدواء المفرد عند البحث عن مادة واحدة
 function filterAndSortResults(
   results: GlobalMedicineResult[],
   query: string
@@ -281,14 +293,15 @@ function filterAndSortResults(
     const medicineKeys = findMedicineKeys(medicine.name)
       .map(normalizeMedicineKey);
 
-    return queryKeys.some((key) => medicineKeys.includes(key));
+    return queryKeys.some((key) =>
+      medicineKeys.includes(key)
+    );
   });
 
   if (matchingResults.length === 0) {
     return results;
   }
 
-  // إذا وجدت نتائج للمادة المفردة، نفضلها على التركيبات
   const singleIngredientResults = matchingResults.filter(
     (medicine) => !isCombinationMedicine(medicine.name)
   );
@@ -298,12 +311,11 @@ function filterAndSortResults(
       ? singleIngredientResults
       : matchingResults;
 
-  // إعطاء الأولوية للاسم الأقرب إلى كلمة البحث
-  const normalizedQuery = query.trim().toLowerCase();
+  const normalizedQuery = normalizeText(query);
 
   return [...finalResults].sort((a, b) => {
-    const aName = a.name.toLowerCase();
-    const bName = b.name.toLowerCase();
+    const aName = normalizeText(a.name);
+    const bName = normalizeText(b.name);
 
     const aExact = aName === normalizedQuery ? 1 : 0;
     const bExact = bName === normalizedQuery ? 1 : 0;
@@ -319,8 +331,21 @@ function filterAndSortResults(
   });
 }
 
+// جلب بيانات JSON مع التحقق من الاستجابة
+async function fetchJson<T>(url: string): Promise<T> {
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+
+  return response.json() as Promise<T>;
+}
+
 function loadCache(): CachedSearch[] {
   try {
+    if (typeof localStorage === "undefined") return [];
+
     const saved = localStorage.getItem(CACHE_KEY);
 
     if (!saved) return [];
@@ -328,13 +353,16 @@ function loadCache(): CachedSearch[] {
     const parsed: unknown = JSON.parse(saved);
 
     return Array.isArray(parsed) ? parsed : [];
-  } catch {
+  } catch (error) {
+    console.error("تعذر قراءة ذاكرة البحث:", error);
     return [];
   }
 }
 
 function saveCache(items: CachedSearch[]): void {
   try {
+    if (typeof localStorage === "undefined") return;
+
     localStorage.setItem(
       CACHE_KEY,
       JSON.stringify(items.slice(-50))
@@ -347,7 +375,7 @@ function saveCache(items: CachedSearch[]): void {
 export function getCachedGlobalMedicineSearch(
   query: string
 ): GlobalMedicineResult[] {
-  const normalized = query.trim().toLowerCase();
+  const normalized = normalizeText(query);
 
   const cached = loadCache().find(
     (item) => item.query === normalized
@@ -358,66 +386,150 @@ export function getCachedGlobalMedicineSearch(
   return filterAndSortResults(results, query);
 }
 
+// البحث الأساسي في قاعدة RxNorm
+async function searchByDrugName(
+  query: string
+): Promise<GlobalMedicineResult[]> {
+  const url =
+    `${API_URL}/drugs.json?name=${encodeURIComponent(query)}&expand=0`;
+
+  const data = await fetchJson<RxNormResponse>(url);
+  const groups = data.drugGroup?.conceptGroup ?? [];
+
+  const results: GlobalMedicineResult[] = [];
+  const seen = new Set<string>();
+  const fetchedAt = new Date().toISOString();
+
+  for (const group of groups) {
+    for (const concept of group.conceptProperties ?? []) {
+      if (!concept.rxcui || !concept.name) continue;
+      if (seen.has(concept.rxcui)) continue;
+
+      seen.add(concept.rxcui);
+
+      results.push(
+        enrichMedicine({
+          rxcui: concept.rxcui,
+          name: concept.name,
+          synonym: concept.synonym ?? "",
+          type: concept.tty ?? group.tty ?? "",
+          source: "RxNorm - U.S. National Library of Medicine",
+          fetchedAt,
+        })
+      );
+    }
+  }
+
+  return results;
+}
+
+// البحث الاحتياطي باستخدام المصطلحات التقريبية
+async function searchByApproximateTerm(
+  query: string
+): Promise<GlobalMedicineResult[]> {
+  const url =
+    `${API_URL}/approximateTerm.json?term=${encodeURIComponent(query)}&maxEntries=15`;
+
+  const data = await fetchJson<ApproximateResponse>(url);
+
+  const candidates =
+    data.approximateGroup?.candidate ?? [];
+
+  const selectedCandidates = candidates
+    .filter((item) => item.rxcui)
+    .slice(0, 10);
+
+  const fetchedAt = new Date().toISOString();
+
+  const results = await Promise.all(
+    selectedCandidates.map(async (candidate) => {
+      try {
+        const propertiesUrl =
+          `${API_URL}/rxcui/${candidate.rxcui}/properties.json`;
+
+        const propertiesData =
+          await fetchJson<PropertiesResponse>(propertiesUrl);
+
+        const medicine =
+          propertiesData.properties;
+
+        if (!medicine?.rxcui || !medicine.name) {
+          return null;
+        }
+
+        return enrichMedicine({
+          rxcui: medicine.rxcui,
+          name: medicine.name,
+          synonym: medicine.synonym ?? "",
+          type: medicine.tty ?? candidate.tty ?? "",
+          source: "RxNorm - U.S. National Library of Medicine",
+          fetchedAt,
+        });
+      } catch {
+        return null;
+      }
+    })
+  );
+
+  return results.filter(
+    (item): item is GlobalMedicineResult => item !== null
+  );
+}
+
 export async function searchGlobalMedicines(
   query: string
 ): Promise<GlobalMedicineResult[]> {
-  const normalized = query.trim().toLowerCase();
+  const normalized = normalizeText(query);
 
   if (!normalized) return [];
 
   try {
-    const url =
-      `${API_URL}?name=${encodeURIComponent(query.trim())}`;
+    let results: GlobalMedicineResult[] = [];
 
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error(`خطأ في الاتصال: ${response.status}`);
+    // المحاولة الأولى
+    try {
+      results = await searchByDrugName(query.trim());
+    } catch (error) {
+      console.warn("تعذر البحث الأساسي:", error);
     }
 
-    const data: RxNormResponse = await response.json();
-    const groups = data.drugGroup?.conceptGroup ?? [];
-    const fetchedAt = new Date().toISOString();
-
-    const results: GlobalMedicineResult[] = [];
-    const seen = new Set<string>();
-
-    for (const group of groups) {
-      for (const concept of group.conceptProperties ?? []) {
-        if (!concept.rxcui || !concept.name) continue;
-        if (seen.has(concept.rxcui)) continue;
-
-        seen.add(concept.rxcui);
-
-        results.push(
-          enrichMedicine({
-            rxcui: concept.rxcui,
-            name: concept.name,
-            synonym: concept.synonym ?? "",
-            type: concept.tty ?? group.tty ?? "",
-            source: "RxNorm - U.S. National Library of Medicine",
-            fetchedAt,
-          })
-        );
+    // المحاولة الاحتياطية
+    if (results.length === 0) {
+      try {
+        results = await searchByApproximateTerm(query.trim());
+      } catch (error) {
+        console.warn("تعذر البحث الاحتياطي:", error);
       }
     }
 
+    // إزالة النتائج المكررة
+    const uniqueResults = Array.from(
+      new Map(
+        results.map((item) => [item.rxcui, item])
+      ).values()
+    );
+
     const filteredResults = filterAndSortResults(
-      results,
+      uniqueResults,
       query
     );
+
+    const fetchedAt = new Date().toISOString();
 
     const cache = loadCache().filter(
       (item) => item.query !== normalized
     );
 
-    cache.push({
-      query: normalized,
-      results: filteredResults,
-      savedAt: fetchedAt,
-    });
+    // لا نستبدل النتائج القديمة بنتائج فارغة
+    if (filteredResults.length > 0) {
+      cache.push({
+        query: normalized,
+        results: filteredResults,
+        savedAt: fetchedAt,
+      });
 
-    saveCache(cache);
+      saveCache(cache);
+    }
 
     return filteredResults;
   } catch (error) {
@@ -426,4 +538,3 @@ export async function searchGlobalMedicines(
     return getCachedGlobalMedicineSearch(query);
   }
 }
-
