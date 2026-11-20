@@ -49,7 +49,7 @@ type CachedSearch = {
 const API_URL = "https://rxnav.nlm.nih.gov/REST";
 const CACHE_KEY = "world-drug-encyclopedia-global-search";
 
-// الأسماء العربية للمواد الدوائية الشائعة
+// الأسماء العربية
 const arabicMedicineNames: Record<string, string> = {
   paracetamol: "باراسيتامول",
   acetaminophen: "باراسيتامول",
@@ -98,7 +98,7 @@ const arabicMedicineNames: Record<string, string> = {
   vitamin: "فيتامين",
 };
 
-// الاستخدامات العربية لبعض المواد المعروفة
+// الاستخدامات العربية المعروفة
 const arabicMedicineUses: Record<string, string[]> = {
   paracetamol: [
     "تخفيف الألم الخفيف إلى المتوسط",
@@ -181,10 +181,7 @@ const arabicMedicineUses: Record<string, string[]> = {
 };
 
 function normalizeText(value: string): string {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, " ");
+  return value.toLowerCase().trim().replace(/\s+/g, " ");
 }
 
 function findMedicineKeys(name: string): string[] {
@@ -222,7 +219,6 @@ function getArabicMedicineName(
   name: string
 ): string | undefined {
   const keys = findMedicineKeys(name);
-
   return keys.length > 0
     ? arabicMedicineNames[keys[0]]
     : undefined;
@@ -331,15 +327,28 @@ function filterAndSortResults(
   });
 }
 
-// جلب بيانات JSON مع التحقق من الاستجابة
+// جلب JSON مع مهلة زمنية ومعالجة الأخطاء
 async function fetchJson<T>(url: string): Promise<T> {
-  const response = await fetch(url);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
 
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+      },
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    return (await response.json()) as T;
+  } finally {
+    clearTimeout(timeout);
   }
-
-  return response.json() as Promise<T>;
 }
 
 function loadCache(): CachedSearch[] {
@@ -347,11 +356,9 @@ function loadCache(): CachedSearch[] {
     if (typeof localStorage === "undefined") return [];
 
     const saved = localStorage.getItem(CACHE_KEY);
-
     if (!saved) return [];
 
     const parsed: unknown = JSON.parse(saved);
-
     return Array.isArray(parsed) ? parsed : [];
   } catch (error) {
     console.error("تعذر قراءة ذاكرة البحث:", error);
@@ -386,12 +393,13 @@ export function getCachedGlobalMedicineSearch(
   return filterAndSortResults(results, query);
 }
 
-// البحث الأساسي في قاعدة RxNorm
+// البحث الأساسي في RxNorm
 async function searchByDrugName(
   query: string
 ): Promise<GlobalMedicineResult[]> {
+  // تم حذف expand=0 من الرابط
   const url =
-    `${API_URL}/drugs.json?name=${encodeURIComponent(query)}&expand=0`;
+    `${API_URL}/drugs.json?name=${encodeURIComponent(query)}`;
 
   const data = await fetchJson<RxNormResponse>(url);
   const groups = data.drugGroup?.conceptGroup ?? [];
@@ -423,7 +431,7 @@ async function searchByDrugName(
   return results;
 }
 
-// البحث الاحتياطي باستخدام المصطلحات التقريبية
+// البحث الاحتياطي
 async function searchByApproximateTerm(
   query: string
 ): Promise<GlobalMedicineResult[]> {
@@ -450,8 +458,7 @@ async function searchByApproximateTerm(
         const propertiesData =
           await fetchJson<PropertiesResponse>(propertiesUrl);
 
-        const medicine =
-          propertiesData.properties;
+        const medicine = propertiesData.properties;
 
         if (!medicine?.rxcui || !medicine.name) {
           return null;
@@ -465,7 +472,8 @@ async function searchByApproximateTerm(
           source: "RxNorm - U.S. National Library of Medicine",
           fetchedAt,
         });
-      } catch {
+      } catch (error) {
+        console.warn("تعذر جلب تفاصيل الدواء:", error);
         return null;
       }
     })
@@ -476,65 +484,66 @@ async function searchByApproximateTerm(
   );
 }
 
+// الدالة الرئيسية التي يستدعيها التطبيق
 export async function searchGlobalMedicines(
   query: string
 ): Promise<GlobalMedicineResult[]> {
-  const normalized = normalizeText(query);
+  const cleanQuery = query.trim();
+  const normalized = normalizeText(cleanQuery);
 
   if (!normalized) return [];
 
+  let results: GlobalMedicineResult[] = [];
+
+  // المحاولة الأولى
   try {
-    let results: GlobalMedicineResult[] = [];
+    results = await searchByDrugName(cleanQuery);
+  } catch (error) {
+    console.warn("تعذر البحث الأساسي:", error);
+  }
 
-    // المحاولة الأولى
+  // المحاولة الاحتياطية عند عدم وجود نتائج
+  if (results.length === 0) {
     try {
-      results = await searchByDrugName(query.trim());
+      results = await searchByApproximateTerm(cleanQuery);
     } catch (error) {
-      console.warn("تعذر البحث الأساسي:", error);
+      console.warn("تعذر البحث الاحتياطي:", error);
     }
+  }
 
-    // المحاولة الاحتياطية
-    if (results.length === 0) {
-      try {
-        results = await searchByApproximateTerm(query.trim());
-      } catch (error) {
-        console.warn("تعذر البحث الاحتياطي:", error);
-      }
-    }
+  // إزالة التكرار
+  const uniqueResults = Array.from(
+    new Map(
+      results.map((item) => [item.rxcui, item])
+    ).values()
+  );
 
-    // إزالة النتائج المكررة
-    const uniqueResults = Array.from(
-      new Map(
-        results.map((item) => [item.rxcui, item])
-      ).values()
-    );
+  const enrichedResults = uniqueResults.map(enrichMedicine);
 
-    const filteredResults = filterAndSortResults(
-      uniqueResults,
-      query
-    );
+  const filteredResults = filterAndSortResults(
+    enrichedResults,
+    cleanQuery
+  );
 
-    const fetchedAt = new Date().toISOString();
-
+  // حفظ النتائج في الذاكرة
+  if (filteredResults.length > 0) {
     const cache = loadCache().filter(
       (item) => item.query !== normalized
     );
 
-    // لا نستبدل النتائج القديمة بنتائج فارغة
-    if (filteredResults.length > 0) {
-      cache.push({
-        query: normalized,
-        results: filteredResults,
-        savedAt: fetchedAt,
-      });
+    cache.push({
+      query: normalized,
+      results: filteredResults,
+      savedAt: new Date().toISOString(),
+    });
 
-      saveCache(cache);
-    }
-
-    return filteredResults;
-  } catch (error) {
-    console.error("فشل البحث العالمي:", error);
-
-    return getCachedGlobalMedicineSearch(query);
+    saveCache(cache);
   }
+
+  // إذا فشل الاتصال، نعيد النتائج المحفوظة سابقاً
+  if (filteredResults.length === 0) {
+    return getCachedGlobalMedicineSearch(cleanQuery);
+  }
+
+  return filteredResults;
 }
