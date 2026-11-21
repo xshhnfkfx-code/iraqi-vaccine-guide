@@ -626,8 +626,27 @@ export const iraqDrugCatalog: IraqDrugCatalogItem[] = [
   { id: 583, name: "Zoledronic acid", arabicName: "حمض زوليدرونيك", page: 651 },
   { id: 584, name: "Zolpidem", arabicName: "زولبيديم", page: 652 },
 
-
-
-
 ];
+
+const duplicateIds = iraqDrugCatalog
+  .filter((item, index, arr) =>
+    arr.findIndex(x => x.id === item.id) !== index
+  )
+  .map(item => item.id);
+
+const duplicateNames = iraqDrugCatalog
+  .filter((item, index, arr) =>
+    arr.findIndex(x =>
+      x.name.trim().toLowerCase() === item.name.trim().toLowerCase()
+    ) !== index
+  )
+  .map(item => item.name);
+
+if (typeof window !== "undefined") {
+  window.alert(
+    `عدد العناصر: ${iraqDrugCatalog.length}\n` +
+    `الأرقام المكررة: ${duplicateIds.join(", ") || "لا يوجد"}\n` +
+    `الأسماء المكررة: ${duplicateNames.join(", ") || "لا يوجد"}`
+  );
+}
 
