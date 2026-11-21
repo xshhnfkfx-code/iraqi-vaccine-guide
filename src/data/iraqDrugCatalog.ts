@@ -604,6 +604,28 @@ export const iraqDrugCatalog: IraqDrugCatalogItem[] = [
   { id: 561, name: "Triptorelin", arabicName: "تريبتوريلين", page: 625 },
   { id: 562, name: "Tropicamide", arabicName: "تروبيكاميد", page: 626 },
   { id: 563, name: "Trospium", arabicName: "تروسبيوم", page: 627 },
+  { id: 564, name: "Ursodeoxycholic Acid", arabicName: "حمض أورسوديوكسيكوليك", page: 628 },
+  { id: 565, name: "Ustekinumab", arabicName: "أوستيكينوماب", page: 631 },
+  { id: 566, name: "Valsartan", arabicName: "فالسارتان", page: 632 },
+  { id: 567, name: "Vancomycin", arabicName: "فانكوميسين", page: 633 },
+  { id: 568, name: "Vardenafil", arabicName: "فاردينافيل", page: 634 },
+  { id: 569, name: "Velaglucerase alfa", arabicName: "فيلاجلوسيراز ألفا", page: 635 },
+  { id: 570, name: "Venlafaxine", arabicName: "فينلافاكسين", page: 636 },
+  { id: 571, name: "Verapamil", arabicName: "فيراباميل", page: 637 },
+  { id: 572, name: "Vildagliptin", arabicName: "فيلداجليبتين", page: 638 },
+  { id: 573, name: "Vincristine", arabicName: "فينكريستين", page: 639 },
+  { id: 574, name: "Vinorelbine", arabicName: "فينوريلبين", page: 640 },
+  { id: 575, name: "Vitamin A", arabicName: "فيتامين A", page: 641 },
+  { id: 576, name: "Vitamin C", arabicName: "فيتامين C", page: 642 },
+  { id: 577, name: "Vitamin E", arabicName: "فيتامين E", page: 643 },
+  { id: 578, name: "Voriconazole", arabicName: "فوريكونازول", page: 644 },
+  { id: 579, name: "Vortioxetine", arabicName: "فورتيُوكسيتين", page: 645 },
+  { id: 580, name: "Xylometazoline", arabicName: "زيلوميتازولين", page: 646 },
+  { id: 581, name: "Zinc oxide", arabicName: "أكسيد الزنك", page: 647 },
+  { id: 582, name: "Zinc Sulfate", arabicName: "كبريتات الزنك", page: 648 },
+  { id: 583, name: "Zoledronic acid", arabicName: "حمض زوليدرونيك", page: 651 },
+  { id: 584, name: "Zolpidem", arabicName: "زولبيديم", page: 652 },
+
 
 
 
